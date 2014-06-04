@@ -1,0 +1,6 @@
+*~
+*.o
+despayre
+*.kate-swp
+*.d
+*.so
