@@ -112,34 +112,46 @@ namespace reaver
                 std::deque<Vertex> sorted;
                 boost::topological_sort(graph, std::front_inserter(sorted));
 
-                reaver::thread_pool pool{ _threads };
+                {
+                    reaver::thread_pool pool{ _threads };
+
+                    for (auto && target : sorted)
+                    {
+                        pool.push([&, target = std::ref(reg[vertexes.right.at(target)])]()
+                        {
+                            for (auto && name : target.get().dependencies())
+                            {
+                                auto && dep = reg[name];
+
+                                while (!dep.built())
+                                {
+                                    if (dep.failed())
+                                    {
+                                        target.get().fail();
+                                        return;
+                                    }
+
+                                    dep.wait_on();
+                                }
+                            }
+
+                            if (!target.get().build())
+                            {
+                                pool.abort();
+                            }
+                        });
+                    }
+                }
 
                 for (auto && target : sorted)
                 {
-                    pool.push([&, target = std::ref(reg[vertexes.right.at(target)])]()
+                    if (!reg[vertexes.right.at(target)].built())
                     {
-                        for (auto && dep : target.get().dependencies())
-                        {
-                            while (!reg[dep].built())
-                            {
-                                reg[dep].wait_on();
-
-                                if (reg[dep].failed())
-                                {
-                                    target.get().fail();
-                                    return;
-                                }
-                            }
-                        }
-
-                        if (!target.get().build())
-                        {
-                            pool.abort();
-                        }
-                    });
+                        return false;
+                    }
                 }
 
-                return false;
+                return true;
             }
 
         protected:

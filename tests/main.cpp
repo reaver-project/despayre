@@ -100,27 +100,37 @@ MAYFLY_ADD_TESTCASE("dependencies with one thread", []
     reaver::despayre::add_target(foo{ "c", { "b", "d" }});
     reaver::despayre::add_target(foo{ "d" });
 
-    reaver::despayre::default_runner(std::make_unique<reaver::despayre::thread_runner>())("a");
+    MAYFLY_REQUIRE(reaver::despayre::default_runner(std::make_unique<reaver::despayre::thread_runner>())("a"));
 });
 
-MAYFLY_ADD_TESTCASE("dependencies with many threads", []
+MAYFLY_ADD_TESTCASE("dependencies with multiple threads", []
 {
     reaver::despayre::add_target(foo{ "a", { "b", "c", "d" }});
     reaver::despayre::add_target(foo{ "b" });
     reaver::despayre::add_target(foo{ "c", { "b", "d" }});
     reaver::despayre::add_target(foo{ "d" });
 
-    reaver::despayre::default_runner(std::make_unique<reaver::despayre::thread_runner>(4))("a");
+    MAYFLY_REQUIRE(reaver::despayre::default_runner(std::make_unique<reaver::despayre::thread_runner>(4))("a"));
 });
 
-MAYFLY_ADD_TESTCASE("failing dependency", []
+MAYFLY_ADD_TESTCASE("failing dependency with one thread", []
 {
     reaver::despayre::add_target(foo{ "a", { "b", "c", "d" }});
     reaver::despayre::add_target(foo{ "b" });
     reaver::despayre::add_target(foo{ "c", { "b", "d" }});
     reaver::despayre::add_target(failing_dependency{ "d" });
 
-    reaver::despayre::default_runner(std::make_unique<reaver::despayre::thread_runner>(4))("a");
+    MAYFLY_REQUIRE(!reaver::despayre::default_runner(std::make_unique<reaver::despayre::thread_runner>())("a"));
+});
+
+MAYFLY_ADD_TESTCASE("failing dependency with multiple threads", []
+{
+    reaver::despayre::add_target(foo{ "a", { "b", "c", "d" }});
+    reaver::despayre::add_target(foo{ "b" });
+    reaver::despayre::add_target(foo{ "c", { "b", "d" }});
+    reaver::despayre::add_target(failing_dependency{ "d" });
+
+    MAYFLY_REQUIRE(!reaver::despayre::default_runner(std::make_unique<reaver::despayre::thread_runner>(4))("a"));
 });
 
 MAYFLY_END_SUITE;
