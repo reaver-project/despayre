@@ -1,6 +1,7 @@
 *~
 *.o
 despayre
+despayre-test
 *.kate-swp
 *.d
 *.so
