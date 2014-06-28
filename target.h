@@ -96,14 +96,14 @@ namespace reaver
             bool build()
             {
                 _failed = !_ptr->build();
-//                _cv.notify_all();
+                _cv.notify_all();
                 return !_failed;
             }
 
             void fail()
             {
                 _failed = true;
-//                _cv.notify_all();
+                _cv.notify_all();
             }
 
             bool built() const
@@ -123,8 +123,8 @@ namespace reaver
 
             void wait_on()
             {
-//                std::unique_lock<std::mutex> lock{ _m };
-//                _cv.wait(lock);
+                std::unique_lock<std::mutex> lock{ _m };
+                _cv.wait(lock);
             }
 
         private:

@@ -42,4 +42,5 @@ clean:
 	@rm -rf $(EXECUTABLE)
 
 -include $(SOURCES:.cpp=.d)
+-include $(TESTSRC:.cpp=.d)
 -include main.d

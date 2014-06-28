@@ -62,6 +62,34 @@ struct foo
     }
 };
 
+struct failing_dependency
+{
+    failing_dependency(std::string name) : _name{ std::move(name) }
+    {
+    }
+
+    std::string _name;
+
+    bool built() const
+    {
+        return false;
+    }
+
+    bool build()
+    {
+        return false;
+    }
+
+    std::string name() const
+    {
+        return _name;
+    }
+
+    std::vector<std::string> dependencies() const
+    {
+        return {};
+    }
+};
 
 MAYFLY_BEGIN_SUITE("basic tests");
 
@@ -82,7 +110,17 @@ MAYFLY_ADD_TESTCASE("dependencies with many threads", []
     reaver::despayre::add_target(foo{ "c", { "b", "d" }});
     reaver::despayre::add_target(foo{ "d" });
 
-    reaver::despayre::default_runner(std::make_unique<reaver::despayre::thread_runner>(8))("a");
+    reaver::despayre::default_runner(std::make_unique<reaver::despayre::thread_runner>(4))("a");
+});
+
+MAYFLY_ADD_TESTCASE("failing dependency", []
+{
+    reaver::despayre::add_target(foo{ "a", { "b", "c", "d" }});
+    reaver::despayre::add_target(foo{ "b" });
+    reaver::despayre::add_target(foo{ "c", { "b", "d" }});
+    reaver::despayre::add_target(failing_dependency{ "d" });
+
+    reaver::despayre::default_runner(std::make_unique<reaver::despayre::thread_runner>(4))("a");
 });
 
 MAYFLY_END_SUITE;
