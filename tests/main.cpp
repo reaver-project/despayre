@@ -91,7 +91,7 @@ struct failing_dependency
     }
 };
 
-MAYFLY_BEGIN_SUITE("basic tests");
+MAYFLY_BEGIN_SUITE("dependencies");
 
 MAYFLY_ADD_TESTCASE("dependencies with one thread", []
 {
@@ -131,6 +131,15 @@ MAYFLY_ADD_TESTCASE("failing dependency with multiple threads", []
     reaver::despayre::add_target(failing_dependency{ "d" });
 
     MAYFLY_REQUIRE(!reaver::despayre::default_runner(std::make_unique<reaver::despayre::thread_runner>(4))("a"));
+});
+
+MAYFLY_ADD_TESTCASE("cyclic dependency", []
+{
+    reaver::despayre::add_target(foo{ "a", { "b" }});
+    reaver::despayre::add_target(foo{ "b", { "c" }});
+    reaver::despayre::add_target(foo{ "c", { "a" }});
+
+    MAYFLY_REQUIRE_THROWS_TYPE(reaver::despayre::cycle_detected, reaver::despayre::default_runner(std::make_unique<reaver::despayre::thread_runner>())("a"));
 });
 
 MAYFLY_END_SUITE;
