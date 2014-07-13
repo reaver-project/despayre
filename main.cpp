@@ -31,7 +31,7 @@ struct foo
     std::string _name;
     std::vector<std::string> deps;
     bool built() const { return _built; }
-    bool build() { _built = true; reaver::logger::dlog() << "building " << _name; return true; }
+    bool build() { reaver::logger::dlog() << "building " << _name; return _built = true; }
     std::string name() const { return _name; }
     std::vector<std::string> dependencies() const { return deps; }
 

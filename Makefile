@@ -26,6 +26,8 @@ library-install: $(LIBRARY)
 $(EXECUTABLE): library-install main.o
 	$(LD) $(LDFLAGS) -o $@ main.o -lreaver -ldespayre -pthread
 
+test: $(TESTEXE)
+
 $(TESTEXE): library-install $(TESTOBJ)
 	$(LD) $(LDFLAGS) -o $@ $(TESTOBJ) -lreaver -ldespayre -pthread -lboost_system -lboost_program_options -lboost_iostreams
 

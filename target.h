@@ -95,6 +95,7 @@ namespace reaver
 
             bool build()
             {
+                std::unique_lock<std::mutex> lock{ _m };
                 _failed = !_ptr->build();
                 _cv.notify_all();
                 return !_failed;
@@ -124,6 +125,12 @@ namespace reaver
             void wait_on()
             {
                 std::unique_lock<std::mutex> lock{ _m };
+
+                if (_ptr->built() || _failed)
+                {
+                    return;
+                }
+
                 _cv.wait(lock);
             }
 
