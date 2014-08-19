@@ -3,7 +3,7 @@ LD=clang++
 CFLAGS=-c -Os -Wall -Wextra -pedantic -Werror -std=c++1y -stdlib=libc++ -g -MD -pthread -fPIC -Wno-unused-private-field
 LDFLAGS=-stdlib=libc++ -lc++abi
 SOFLAGS=-stdlib=libc++ -shared
-SOURCES=$(shell find . -type f -name "*.cpp" ! -path "./main.cpp" ! -path "./tests/*")
+SOURCES=$(shell find . -type f -name "*.cpp" ! -path "./main.cpp" ! -path "./tests/*" ! -name "buildlist.cpp")
 TESTSRC=$(shell find ./tests/ -type f -name "*.cpp")
 OBJECTS=$(SOURCES:.cpp=.o)
 TESTOBJ=$(TESTSRC:.cpp=.o)

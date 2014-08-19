@@ -57,13 +57,13 @@ int main(/*int argc, char ** argv*/) try
 
     if (engine.size())
     {
-        engine.print(reaver::logger::dlog);
+        engine.print(reaver::logger::default_logger());
     }
 }
 
 catch (reaver::exception & e)
 {
-    e.print(reaver::logger::dlog);
+    e.print(reaver::logger::default_logger());
 
     if (e.level() == reaver::logger::crash)
     {
