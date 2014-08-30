@@ -24,7 +24,7 @@ library-install: $(LIBRARY)
 	@sudo ln -sfn /usr/local/lib/$(LIBRARY).1.0 /usr/local/lib/$(LIBRARY)
 
 $(EXECUTABLE): library-install main.o
-	$(LD) $(LDFLAGS) -o $@ main.o -lreaver -ldespayre -pthread
+	$(LD) $(LDFLAGS) -o $@ main.o -lreaver -ldespayre -pthread -lboost_filesystem -ldl
 
 test: $(TESTEXE)
 
