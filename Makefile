@@ -29,7 +29,7 @@ $(EXECUTABLE): library-install main.o
 test: $(TESTEXE)
 
 $(TESTEXE): library-install $(TESTOBJ)
-	$(LD) $(LDFLAGS) -o $@ $(TESTOBJ) -lreaver -ldespayre -pthread -lboost_system -lboost_program_options -lboost_iostreams
+	$(LD) $(LDFLAGS) -o $@ $(TESTOBJ) -lreaver -ldespayre -pthread -lboost_system -lboost_program_options -lboost_iostreams -lboost_filesystem -ldl
 
 $(LIBRARY): $(OBJECTS)
 	$(LD) $(SOFLAGS) -o $@ $(OBJECTS) -lreaver
