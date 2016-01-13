@@ -91,7 +91,7 @@ namespace reaver
         {
             if (r.end() - r.start() > 1)
             {
-                return os << r.start().line << ":" << r.start().column << " (" << r.start().offset << ") " << r.end().line << ":" << r.end().column << " (" << r.end().offset << ")";
+                return os << r.start().line << ":" << r.start().column << " (" << r.start().offset << ") - " << r.end().line << ":" << r.end().column << " (" << r.end().offset << ")";
             }
 
             return os << r.start().line << ":" << r.start().column << " (" << r.start().offset << ")";

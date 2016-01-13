@@ -24,6 +24,8 @@
 
 #include <vector>
 
+#include <boost/locale.hpp>
+
 #include <reaver/variant.h>
 #include <reaver/optional.h>
 
@@ -39,16 +41,45 @@ namespace reaver
             std::vector<token>::iterator end;
         };
 
-        inline token expect(context & ctx, token_type expected)
+        inline std::string utf8(std::experimental::u32string_view other)
         {
-            if (ctx.begin->type != expected)
+            return boost::locale::conv::utf_to_utf<char>(std::begin(other), std::end(other));
+        }
+
+        class expectation_failure : public exception
+        {
+        public:
+            expectation_failure(token_type expected, std::experimental::u32string_view actual, range_type & r) : exception{ logger::fatal }
             {
-                std::terminate(); // need an actual handling here
+                *this << r << ": expected `" << token_types[+expected] << "`, got `" << utf8(actual) << "`";
             }
 
+            expectation_failure(std::experimental::string_view str, std::experimental::u32string_view actual, range_type & r) : exception{ logger::fatal }
+            {
+                *this <<  r << ": expected " << str << ", got `" << utf8(actual) << "`";
+            }
+
+            expectation_failure(token_type expected) : exception{ logger::fatal }
+            {
+                *this << "expected `" << token_types[+expected] << "`, got end of file";
+            }
+
+            expectation_failure(std::experimental::string_view str) : exception{ logger::fatal }
+            {
+                *this << "expected `" << str << "`, got end of file";
+            }
+        };
+
+        inline token expect(context & ctx, token_type expected)
+        {
             if (ctx.begin == ctx.end)
             {
-                std::terminate(); // and need it here too
+                throw expectation_failure{ expected };
+            }
+
+            if (ctx.begin->type != expected)
+            {
+                throw expectation_failure{ expected, ctx.begin->string, ctx.begin->range };
             }
 
             return std::move(*ctx.begin++);
@@ -131,10 +162,18 @@ namespace reaver
 
         reaver::variant<string, id_expression, instantiation> parse_expression(context & ctx);
 
+        enum class assignment_type
+        {
+            assignment,
+            addition,
+            removal
+        };
+
         struct assignment
         {
             range_type range;
             id_expression lhs;
+            assignment_type type;
             reaver::variant<
                 string, // just a value
                 id_expression, // an alias

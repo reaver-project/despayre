@@ -40,11 +40,30 @@ std::vector<reaver::despayre::assignment> reaver::despayre::_v1::parse(std::vect
 
 reaver::despayre::assignment reaver::despayre::_v1::parse_assignment(reaver::despayre::context & ctx)
 {
+    static std::unordered_map<token_type, assignment_type> assignments = {
+        { token_type::equals, assignment_type::assignment },
+        { token_type::plus_equals, assignment_type::addition },
+        { token_type::minus_equals, assignment_type::removal }
+    };
+
     auto id = parse_id_expression(ctx);
-    expect(ctx, token_type::equals);
+
+    auto peeked = peek(ctx);
+    if (!peeked)
+    {
+        throw expectation_failure{ "assignment-operator" };
+    }
+
+    auto it = assignments.find(peeked->type);
+    if (it == assignments.end())
+    {
+        throw expectation_failure{ "assignment-operator", peeked->string, ctx.begin->range };
+    }
+    auto op = expect(ctx, peeked->type);
+
     auto value = parse_expression(ctx);
 
-    return { range_type{ id.range.start(), get<0>(fmap(value, [](auto && v){ return v.range.end(); })) }, std::move(id), std::move(value) };
+    return { range_type{ id.range.start(), get<0>(fmap(value, [](auto && v){ return v.range.end(); })) }, std::move(id), it->second, std::move(value) };
 }
 
 reaver::despayre::id_expression reaver::despayre::_v1::parse_id_expression(reaver::despayre::context & ctx)
@@ -84,7 +103,7 @@ expression reaver::despayre::_v1::parse_expression(reaver::despayre::context & c
     auto peeked = peek(ctx);
     if (!peeked)
     {
-        std::terminate();
+        throw expectation_failure{ "expression" };
     }
 
     switch (peeked->type)
@@ -125,7 +144,7 @@ expression reaver::despayre::_v1::parse_expression(reaver::despayre::context & c
         }
 
         default:
-            std::terminate();
+            throw expectation_failure{ "expression", peeked->string, ctx.begin->range };
     }
 }
 

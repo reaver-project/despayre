@@ -20,9 +20,29 @@
  *
  **/
 
-#include "parser/lexer.h"
+#include <fstream>
+#include <string>
+#include <boost/locale.hpp>
 
-int main(int argc, char ** argv)
+#include "parser/parser.h"
+
+int main(int argc, char ** argv) try
 {
+    std::ifstream input{ "./buildfile" };
+    std::string buffer_utf8{ std::istreambuf_iterator<char>{ input.rdbuf() }, std::istreambuf_iterator<char>{} };
+    std::u32string input_content = boost::locale::conv::utf_to_utf<char32_t>(buffer_utf8);
+
+    auto tokens = reaver::despayre::tokenize(input_content, "buildfile");
+    auto parse = reaver::despayre::parse(tokens);
+}
+catch (reaver::exception & ex)
+{
+    ex.print(reaver::logger::default_logger());
+    return 2;
+}
+catch (std::exception & ex)
+{
+    reaver::logger::dlog(reaver::logger::fatal) << ex.what();
+    return 1;
 }
 

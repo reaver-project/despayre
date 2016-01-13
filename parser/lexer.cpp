@@ -71,7 +71,7 @@ std::vector<reaver::despayre::_v1::token> reaver::despayre::_v1::tokenize(const 
     position pos;
     pos.offset = -1;
     pos.column = 0;
-    pos.line = 0;
+    pos.line = 1;
     pos.file = std::move(filename);
 
     auto begin = std::begin(buildfile);
@@ -93,6 +93,7 @@ std::vector<reaver::despayre::_v1::token> reaver::despayre::_v1::tokenize(const 
         }
 
         ++pos.offset;
+        ++pos.column;
         return *begin++;
     };
 
@@ -229,7 +230,7 @@ std::vector<reaver::despayre::_v1::token> reaver::despayre::_v1::tokenize(const 
             continue;
         }
 
-        std::terminate(); // need a new exception for this
+        throw exception{ logger::fatal } << range_type{ pos, pos } << ": unexpected character: `" << *next << "`";
     }
 
     return tokens;
