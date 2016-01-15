@@ -144,6 +144,8 @@ namespace reaver
 
         id_expression parse_id_expression(context & ctx);
 
+        struct complex_expression;
+
         struct instantiation
         {
             range_type range;
@@ -151,7 +153,8 @@ namespace reaver
             std::vector<reaver::variant<
                 string,
                 id_expression,
-                instantiation
+                instantiation,
+                recursive_wrapper<complex_expression>
             >> arguments;
 
             bool operator==(const instantiation & other) const
@@ -160,7 +163,47 @@ namespace reaver
             }
         };
 
-        reaver::variant<string, id_expression, instantiation> parse_expression(context & ctx);
+        using expression = variant<
+            string,
+            id_expression,
+            instantiation,
+            recursive_wrapper<complex_expression>
+        >;
+
+        enum class operation_type
+        {
+            addition,
+            removal
+        };
+
+        struct operation
+        {
+            range_type range;
+            operation_type operation;
+            expression operand;
+
+            bool operator==(const struct operation & other) const
+            {
+                return operation == other.operation && operand == other.operand;
+            }
+        };
+
+        std::vector<operation> parse_operations(context & ctx);
+
+        struct complex_expression
+        {
+            range_type range;
+            expression base;
+            std::vector<operation> operations;
+
+            bool operator==(const complex_expression & other) const
+            {
+                return base == other.base && operations == other.operations;
+            }
+        };
+
+        expression parse_argument(context & ctx, bool complex = true);
+        expression parse_expression(context & ctx, bool complex = true);
 
         enum class assignment_type
         {
@@ -174,11 +217,7 @@ namespace reaver
             range_type range;
             id_expression lhs;
             assignment_type type;
-            reaver::variant<
-                string, // just a value
-                id_expression, // an alias
-                instantiation // a new thingy
-            > rhs;
+            expression rhs;
 
             bool operator==(const assignment & other) const
             {

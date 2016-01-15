@@ -92,13 +92,39 @@ reaver::despayre::string reaver::despayre::_v1::parse_string(reaver::despayre::c
     return { std::move(token.range), std::move(token) };
 }
 
-using expression = reaver::variant<
-    reaver::despayre::string,
-    reaver::despayre::id_expression,
-    reaver::despayre::instantiation
->;
+std::vector<reaver::despayre::operation> reaver::despayre::_v1::parse_operations(reaver::despayre::context & ctx)
+{
+    auto peeked = peek(ctx);
 
-expression reaver::despayre::_v1::parse_expression(reaver::despayre::context & ctx)
+    std::vector<operation> operations;
+    while (peeked && (peeked->type == token_type::plus || peeked->type == token_type::minus))
+    {
+        operation_type operation = expect(ctx, peeked->type).type == token_type::plus ? operation_type::addition : operation_type::removal;
+        auto operand = parse_expression(ctx);
+        auto end = get<0>(fmap(operand, [](auto && op){ return op.range.end(); }));
+        operations.push_back({ range_type{ peeked->range.start(), end }, operation, std::move(operand) });
+
+        peeked = peek(ctx);
+    }
+
+    return operations;
+}
+
+reaver::despayre::expression reaver::despayre::_v1::parse_argument(reaver::despayre::context & ctx, bool complex)
+{
+    auto expr = parse_expression(ctx);
+    auto peeked = peek(ctx);
+    if (complex && peeked && (peeked->type == token_type::plus || peeked->type == token_type::minus))
+    {
+        auto operations = parse_operations(ctx);
+        auto start = get<0>(fmap(expr, [](auto && expr){ return expr.range.start(); }));
+        return complex_expression{ range_type{ start, operations.back().range.end() }, std::move(expr), std::move(operations) };
+    }
+
+    return expr;
+}
+
+reaver::despayre::expression reaver::despayre::_v1::parse_expression(reaver::despayre::context & ctx, bool complex)
 {
     auto peeked = peek(ctx);
     if (!peeked)
@@ -124,12 +150,12 @@ expression reaver::despayre::_v1::parse_expression(reaver::despayre::context & c
 
                 if (peek(ctx) && peek(ctx)->type != token_type::close_paren)
                 {
-                    arguments.push_back(parse_expression(ctx));
+                    arguments.push_back(parse_argument(ctx, complex));
 
                     while (peek(ctx) && peek(ctx)->type != token_type::close_paren)
                     {
                         expect(ctx, token_type::comma);
-                        arguments.push_back(parse_expression(ctx));
+                        arguments.push_back(parse_argument(ctx, complex));
                     }
                 }
 
