@@ -48,6 +48,7 @@ MAYFLY_ADD_TESTCASE("assignments", []()
     MAYFLY_CHECK(parse(UR"(a = b)") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } }
         }
     });
@@ -55,6 +56,7 @@ MAYFLY_ADD_TESTCASE("assignments", []()
     MAYFLY_CHECK(parse(UR"(a = "b")") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
             string{ {}, { token_type::string, U"\"b\"", {} } }
         }
     });
@@ -66,6 +68,7 @@ MAYFLY_ADD_TESTCASE("assignments", []()
                 identifier{ {}, { token_type::identifier, U"b", {} } },
                 identifier{ {}, { token_type::identifier, U"c", {} } },
             }},
+            assignment_type::assignment,
             string{ {}, { token_type::string, U"\"b\"", {} } }
         }
     });
@@ -77,6 +80,7 @@ MAYFLY_ADD_TESTCASE("assignments", []()
                 identifier{ {}, { token_type::identifier, U"b", {} } },
                 identifier{ {}, { token_type::identifier, U"c", {} } },
             }},
+            assignment_type::assignment,
             id_expression{ {}, {
                 identifier{ {}, { token_type::identifier, U"d", {} } },
                 identifier{ {}, { token_type::identifier, U"e", {} } },
@@ -92,6 +96,7 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
     MAYFLY_CHECK(parse(UR"(a = b())") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
             instantiation{ {},
                 id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } },
                 {}
@@ -102,6 +107,7 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
     MAYFLY_CHECK(parse(UR"(a = a.b())") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
             instantiation{ {},
                 id_expression{ {}, {
                     identifier{ {}, { token_type::identifier, U"a", {} } },
@@ -115,6 +121,7 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
     MAYFLY_CHECK(parse(UR"(a = a("abc"))") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
             instantiation{ {},
                 id_expression{ {}, {
                     identifier{ {}, { token_type::identifier, U"a", {} } }
@@ -129,6 +136,7 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
     MAYFLY_CHECK(parse(UR"(a = a("abc", "def"))") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
             instantiation{ {},
                 id_expression{ {}, {
                     identifier{ {}, { token_type::identifier, U"a", {} } }
@@ -144,6 +152,7 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
     MAYFLY_CHECK(parse(UR"(a = a(abc))") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
             instantiation{ {},
                 id_expression{ {}, {
                     identifier{ {}, { token_type::identifier, U"a", {} } }
@@ -158,6 +167,7 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
     MAYFLY_CHECK(parse(UR"(a = a(abc, x(yz, "uv")))") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
             instantiation{ {},
                 id_expression{ {}, {
                     identifier{ {}, { token_type::identifier, U"a", {} } }
@@ -188,11 +198,93 @@ MAYFLY_ADD_TESTCASE("multiple assignments", []()
     MAYFLY_CHECK(parse(UR"(a = b c = d)") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } }
         },
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"c", {} } } } },
+            assignment_type::assignment,
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"d", {} } } } }
+        }
+    });
+});
+
+MAYFLY_ADD_TESTCASE("modifying assignments", []()
+{
+    using namespace reaver::despayre;
+
+    MAYFLY_CHECK(parse(UR"(a += "abc")") == parse_type{
+        assignment{ {},
+            id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::addition,
+            string{ {}, { token_type::string, UR"("abc")", {} } }
+        }
+    });
+
+    MAYFLY_CHECK(parse(UR"(a -= "abc")") == parse_type{
+        assignment{ {},
+            id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::removal,
+            string{ {}, { token_type::string, UR"("abc")", {} } }
+        }
+    });
+});
+
+MAYFLY_ADD_TESTCASE("complex expressions", []()
+{
+    using namespace reaver::despayre;
+
+    MAYFLY_CHECK(parse(UR"(a = b + c)") == parse_type{
+        assignment{ {},
+            id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
+            complex_expression{ {},
+                id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } },
+                {
+                    operation{ {}, operation_type::addition, { id_expression{ {}, { identifier{ {}, { token_type::identifier, U"c", {} } } } } } }
+                }
+            }
+        }
+    });
+
+    MAYFLY_CHECK(parse(UR"(a = b - c)") == parse_type{
+        assignment{ {},
+            id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
+            complex_expression{ {},
+                id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } },
+                {
+                    operation{ {}, operation_type::removal, { id_expression{ {}, { identifier{ {}, { token_type::identifier, U"c", {} } } } } } }
+                }
+            }
+        }
+    });
+
+    MAYFLY_CHECK(parse(UR"(a = b + c + d)") == parse_type{
+        assignment{ {},
+            id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
+            complex_expression{ {},
+                id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } },
+                {
+                    operation{ {}, operation_type::addition, { id_expression{ {}, { identifier{ {}, { token_type::identifier, U"c", {} } } } } } },
+                    operation{ {}, operation_type::addition, { id_expression{ {}, { identifier{ {}, { token_type::identifier, U"d", {} } } } } } }
+                }
+            }
+        }
+    });
+
+    MAYFLY_CHECK(parse(UR"(a = b + c - d)") == parse_type{
+        assignment{ {},
+            id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
+            assignment_type::assignment,
+            complex_expression{ {},
+                id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } },
+                {
+                    operation{ {}, operation_type::addition, { id_expression{ {}, { identifier{ {}, { token_type::identifier, U"c", {} } } } } } },
+                    operation{ {}, operation_type::removal, { id_expression{ {}, { identifier{ {}, { token_type::identifier, U"d", {} } } } } } }
+                }
+            }
         }
     });
 });

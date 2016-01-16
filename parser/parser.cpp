@@ -61,7 +61,7 @@ reaver::despayre::assignment reaver::despayre::_v1::parse_assignment(reaver::des
     }
     auto op = expect(ctx, peeked->type);
 
-    auto value = parse_expression(ctx);
+    auto value = parse_argument(ctx);
 
     return { range_type{ id.range.start(), get<0>(fmap(value, [](auto && v){ return v.range.end(); })) }, std::move(id), it->second, std::move(value) };
 }
