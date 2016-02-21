@@ -105,18 +105,18 @@ namespace reaver
             return reaver::none;
         }
 
-        struct string
+        struct string_node
         {
             range_type range;
             token value;
 
-            bool operator==(const string & other) const
+            bool operator==(const string_node & other) const
             {
                 return value.string == other.value.string;
             }
         };
 
-        string parse_string(context & ctx);
+        string_node parse_string(context & ctx);
 
         struct identifier
         {
@@ -151,7 +151,7 @@ namespace reaver
             range_type range;
             id_expression type_name;
             std::vector<reaver::variant<
-                string,
+                string_node,
                 id_expression,
                 instantiation,
                 recursive_wrapper<complex_expression>
@@ -164,7 +164,7 @@ namespace reaver
         };
 
         using expression = variant<
-            string,
+            string_node,
             id_expression,
             instantiation,
             recursive_wrapper<complex_expression>

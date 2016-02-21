@@ -23,7 +23,7 @@
 #include <reaver/unit.h>
 #include <reaver/optional.h>
 
-#include "lexer.h"
+#include "despayre/parser/lexer.h"
 
 using reaver::despayre::token_types;
 using reaver::despayre::token_type;
@@ -66,13 +66,13 @@ const std::unordered_map<char32_t, std::unordered_map<char32_t, token_type>> rea
     } }
 };
 
-std::vector<reaver::despayre::_v1::token> reaver::despayre::_v1::tokenize(const std::experimental::u32string_view buildfile, std::string filename)
+std::vector<reaver::despayre::_v1::token> reaver::despayre::_v1::tokenize(const std::experimental::u32string_view buildfile, const boost::filesystem::path & filename)
 {
     position pos;
     pos.offset = -1;
     pos.column = 0;
     pos.line = 1;
-    pos.file = std::move(filename);
+    pos.file = filename.string();
 
     auto begin = std::begin(buildfile);
     auto end = std::end(buildfile);

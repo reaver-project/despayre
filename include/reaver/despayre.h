@@ -20,24 +20,7 @@
  *
  **/
 
-#include <fstream>
-#include <string>
-#include <boost/locale.hpp>
+#pragma once
 
-#include "despayre.h"
-
-int main(int argc, char ** argv) try
-{
-    auto context = reaver::despayre::despayre{ "./buildfile" };
-}
-catch (reaver::exception & ex)
-{
-    ex.print(reaver::logger::default_logger());
-    return 2;
-}
-catch (std::exception & ex)
-{
-    reaver::logger::dlog(reaver::logger::fatal) << ex.what();
-    return 1;
-}
+#include "despayre/despayre.h"
 

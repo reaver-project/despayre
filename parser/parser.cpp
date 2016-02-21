@@ -20,7 +20,7 @@
  *
  **/
 
-#include "parser.h"
+#include "despayre/parser/parser.h"
 
 std::vector<reaver::despayre::assignment> reaver::despayre::_v1::parse(std::vector<reaver::despayre::token> tokens)
 {
@@ -86,7 +86,7 @@ reaver::despayre::identifier reaver::despayre::_v1::parse_identifier(reaver::des
     return { std::move(token.range), std::move(token) };
 }
 
-reaver::despayre::string reaver::despayre::_v1::parse_string(reaver::despayre::context & ctx)
+reaver::despayre::string_node reaver::despayre::_v1::parse_string(reaver::despayre::context & ctx)
 {
     auto token = expect(ctx, token_type::string);
     return { std::move(token.range), std::move(token) };

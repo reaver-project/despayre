@@ -22,7 +22,7 @@
 
 #include <reaver/mayfly.h>
 
-#include "../parser/parser.h"
+#include "despayre/parser/parser.h"
 
 namespace
 {

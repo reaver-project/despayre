@@ -28,6 +28,8 @@
 #include <vector>
 #include <experimental/string_view>
 
+#include <boost/filesystem.hpp>
+
 #include <reaver/exception.h>
 
 namespace reaver
@@ -134,7 +136,7 @@ namespace reaver
             range_type range;
         };
 
-        std::vector<token> tokenize(const std::experimental::u32string_view buildfile, std::string filename);
+        std::vector<token> tokenize(const std::experimental::u32string_view buildfile, const boost::filesystem::path & filename);
 
         class unterminated_comment : public reaver::exception
         {

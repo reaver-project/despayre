@@ -2,6 +2,6 @@
 *.o
 *.d
 *.so
-despayre
+/despayre
 .*
 tests/test
