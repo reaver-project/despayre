@@ -29,7 +29,13 @@ namespace reaver
 {
     namespace despayre { inline namespace _v1
     {
-        std::unordered_map<std::u32string, std::shared_ptr<variable>> analyze(const std::vector<assignment> & parse_tree);
+        struct analysis_results
+        {
+            std::unordered_map<std::u32string, std::shared_ptr<variable>> variables;
+            std::unordered_map<std::u32string, std::shared_ptr<target>> targets;
+        };
+
+        analysis_results analyze(const std::vector<assignment> & parse_tree);
 
         std::shared_ptr<variable> analyze_expression(semantic_context & ctx, const expression & expr);
     }}

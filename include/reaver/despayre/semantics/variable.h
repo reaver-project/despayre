@@ -23,6 +23,7 @@
 #pragma once
 
 #include "type.h"
+#include "../parser/parser.h"
 
 #include <memory>
 #include <unordered_map>
@@ -30,12 +31,36 @@
 
 #include <reaver/once.h>
 #include <reaver/optional.h>
+#include <reaver/future.h>
 
 namespace reaver
 {
     namespace despayre { inline namespace _v1
     {
+        class invalid_add_property : public exception
+        {
+        public:
+            invalid_add_property(std::u32string name) : exception{ logger::error }, name{ std::move(name) }
+            {
+                *this << "failed to add property `" << utf8(name) << " `to a variable.";
+            }
+
+            std::u32string name;
+        };
+
+        class invalid_get_property : public exception
+        {
+        public:
+            invalid_get_property(std::u32string name) : exception{ logger::error }, name{ std::move(name) }
+            {
+                *this << "failed to get property `" << utf8(name) << " `from a variable.";
+            }
+
+            std::u32string name;
+        };
+
         class delayed_variable;
+        class target;
 
         // ...in Vapor this will be a typeclass
         // ...but doing that kind of thing in C++ manually is troublesome
@@ -80,6 +105,16 @@ namespace reaver
                 return std::dynamic_pointer_cast<const T>(_shared_this());
             }
 
+            virtual std::shared_ptr<target> as_target()
+            {
+                if (type() && type()->is_target_type)
+                {
+                    return std::dynamic_pointer_cast<target>(_shared_this());
+                }
+
+                assert(!"nope");
+            }
+
             std::shared_ptr<variable> operator+=(const std::shared_ptr<variable> & other)
             {
                 _operator_plus_call_table.at(other->_type_id)(*this, other);
@@ -102,6 +137,16 @@ namespace reaver
             {
                 auto clone = _clone();
                 return *clone -= other;
+            }
+
+            virtual void add_property(std::u32string name, std::shared_ptr<variable> value)
+            {
+                throw invalid_add_property{ std::move(name) };
+            }
+
+            virtual std::shared_ptr<variable> get_property(const std::u32string & name) const
+            {
+                throw invalid_get_property{ name };
             }
 
         protected:
@@ -132,6 +177,26 @@ namespace reaver
             target(type_identifier type_id) : variable{ type_id }
             {
             }
+
+            virtual bool built() const = 0;
+
+            future<> build()
+            {
+                if (!_build_future)
+                {
+                    _build_future = when_all(fmap(dependencies(), [](auto && dep){ return dep->build(); }))
+                        .then([&](){ _build(); });
+                }
+
+                return *_build_future;
+            }
+
+            virtual std::vector<std::shared_ptr<target>> dependencies() const = 0;
+
+        protected:
+            virtual void _build() = 0;
+
+            optional<future<>> _build_future;
         };
 
         namespace _detail
@@ -199,6 +264,7 @@ namespace reaver
         struct semantic_context
         {
             std::unordered_map<std::u32string, std::shared_ptr<variable>> variables;
+            std::unordered_map<std::u32string, std::shared_ptr<target>> targets;
             std::unordered_set<std::shared_ptr<delayed_variable>> unresolved;
         };
 
@@ -252,6 +318,23 @@ namespace reaver
                         }
 
                         return false;
+                    }
+                )));
+            }
+
+            virtual std::shared_ptr<target> as_target() override
+            {
+                return get<0>(fmap(_state, make_overload_set(
+                    [&](const std::shared_ptr<variable> & resolved) {
+                        return resolved->as_target();
+                    },
+
+                    [&](const _delayed_reference_info &) -> std::shared_ptr<target> {
+                        assert(!"");
+                    },
+
+                    [&](const _delayed_instantiation_info &) -> std::shared_ptr<target> {
+                        assert(!"");
                     }
                 )));
             }
@@ -313,9 +396,42 @@ namespace reaver
             > _state;
         };
 
-        class delayed_target : public target
+        class name_space // silly keywords
+            : public clone_wrapper<name_space>
         {
+        public:
+            name_space() : clone_wrapper<name_space>{ get_type_identifier<name_space>() }
+            {
+            }
+
+            virtual void add_property(std::u32string name, std::shared_ptr<variable> value) override
+            {
+                auto & variable = _map[std::move(name)];
+                if (variable)
+                {
+                    assert(!"do something in this case");
+                }
+                variable = std::move(value);
+            }
+
+            virtual std::shared_ptr<variable> get_property(const std::u32string & name) const override
+            {
+                auto it = _map.find(name);
+                if (it == _map.end())
+                {
+                    assert(!"do something in this case too");
+                }
+                return it->second;
+            }
+
+        private:
+            std::unordered_map<std::u32string, std::shared_ptr<variable>> _map;
         };
+
+        namespace _detail
+        {
+            static auto _register_namespace = once([]{ create_type<name_space>(U"namespace", "<builtin>", nullptr); });
+        }
 
         template<typename T>
         std::shared_ptr<variable> default_constructor(std::vector<std::shared_ptr<variable>> variables)

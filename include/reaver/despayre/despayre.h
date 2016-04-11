@@ -46,7 +46,47 @@ namespace reaver
             despayre(std::u32string buildfile_contents, boost::filesystem::path buildfile_path, boost::filesystem::path cwd = boost::filesystem::current_path()) : _buildfile_path{ std::move(buildfile_path) }, _working_directory{ std::move(cwd) }, _buildfile{ std::move(buildfile_contents) }
             {
                 _parse_tree = parse(tokenize(_buildfile, _buildfile_path));
-                _variables = analyze(_parse_tree);
+                auto analyzed = analyze(_parse_tree);
+                _variables = std::move(analyzed.variables);
+                _targets = std::move(analyzed.targets);
+            }
+
+            // TODO: this also should return a future
+            // not block like a dumb temporary implementation that it is
+            void build(std::string target_name)
+            {
+                std::u32string converted = boost::locale::conv::utf_to_utf<char32_t>(target_name);
+
+                std::shared_ptr<target> target;
+                if (_targets.find(converted) != _targets.end())
+                {
+                    target = _targets.at(converted);
+                }
+                else
+                {
+                    if (_variables.find(converted) != _variables.end())
+                    {
+                        auto variable = _variables.at(converted);
+                        if (variable->type()->is_target_type)
+                        {
+                            target = variable->as_target();
+                        }
+                    }
+                }
+
+                if (!target)
+                {
+                    assert(!"what do");
+                }
+
+                if (!target->built())
+                {
+                    auto future = target->build();
+                    while (!future.try_get())
+                    {
+                        std::this_thread::yield();
+                    }
+                }
             }
 
         private:
@@ -58,6 +98,7 @@ namespace reaver
             std::vector<assignment> _parse_tree;
 
             std::unordered_map<std::u32string, std::shared_ptr<variable>> _variables;
+            std::unordered_map<std::u32string, std::shared_ptr<target>> _targets;
 
             static std::u32string _load_file(const boost::filesystem::path & buildfile_path)
             {

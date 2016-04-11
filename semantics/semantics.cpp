@@ -79,19 +79,37 @@ namespace reaver
 {
     namespace despayre { inline namespace _v1
     {
-        class print : public clone_wrapper<print>
+        class print : public target_clone_wrapper<print>
         {
         public:
-            print(std::vector<std::shared_ptr<variable>> args) : clone_wrapper<print>{ get_type_identifier<print>() }
+            print(std::vector<std::shared_ptr<variable>> args) : target_clone_wrapper<print>{ get_type_identifier<print>() }, _args{ std::move(args) }
             {
-                for (auto && arg : args)
+            }
+
+            print(const print &) = default;
+            print(print &&) = default;
+
+            virtual std::vector<std::shared_ptr<target>> dependencies() const override
+            {
+                return {};
+            }
+
+            virtual bool built() const override
+            {
+                return false;
+            }
+
+        protected:
+            virtual void _build() override
+            {
+                for (auto && arg : _args)
                 {
                     logger::dlog() << utf8(arg->as<string>()->value());
                 }
             }
 
-            print(const print &) = default;
-            print(print &&) = default;
+        private:
+            std::vector<std::shared_ptr<variable>> _args;
         };
 
         auto register_print = once([]{
@@ -103,10 +121,51 @@ namespace reaver
                 })
             );
         });
+
+        class aggregate : public target_clone_wrapper<aggregate>
+        {
+        public:
+            aggregate(std::vector<std::shared_ptr<variable>> args) : target_clone_wrapper<aggregate>{ get_type_identifier<aggregate>() }
+            {
+                for (auto && arg : args)
+                {
+                    if (arg->type() && arg->type()->is_target_type)
+                    {
+                        _args.push_back(arg->as_target());
+                    }
+                }
+            }
+
+            virtual bool built() const override
+            {
+                return false;
+            }
+
+            virtual std::vector<std::shared_ptr<target>> dependencies() const override
+            {
+                return _args;
+            }
+
+        protected:
+            virtual void _build() override
+            {
+            }
+
+        private:
+            std::vector<std::shared_ptr<target>> _args;
+        };
+
+        auto register_aggregate = once([]{
+            create_type<aggregate>(
+                U"aggregate",
+                "<builtin>",
+                make_type_checking_constructor<aggregate>({})
+            );
+        });
     }}
 }
 
-var_map reaver::despayre::_v1::analyze(const std::vector<reaver::despayre::_v1::assignment> & parse_tree)
+reaver::despayre::_v1::analysis_results reaver::despayre::_v1::analyze(const std::vector<reaver::despayre::_v1::assignment> & parse_tree)
 {
     semantic_context ctx;
 
@@ -119,6 +178,10 @@ var_map reaver::despayre::_v1::analyze(const std::vector<reaver::despayre::_v1::
             case assignment_type::assignment:
                 assert(assignment.lhs.identifiers.size() == 1);
                 ctx.variables.emplace(assignment.lhs.identifiers.front().value.string, rhs_value);
+                if (rhs_value->type() && rhs_value->type()->is_target_type)
+                {
+                    ctx.targets.emplace(assignment.lhs.identifiers.front().value.string, std::dynamic_pointer_cast<target>(rhs_value));
+                }
 
             case assignment_type::addition:
                 assert(1);
@@ -147,6 +210,6 @@ var_map reaver::despayre::_v1::analyze(const std::vector<reaver::despayre::_v1::
         throw exception{ logger::fatal } << "some variables could not have been resolved";
     }
 
-    return std::move(ctx.variables);
+    return { std::move(ctx.variables), std::move(ctx.targets) };
 }
 
