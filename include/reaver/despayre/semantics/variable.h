@@ -300,7 +300,13 @@ namespace reaver
                         auto var_it = ctx.variables.find(info.referenced_id_expression.front());
                         if (var_it != ctx.variables.end())
                         {
-                            _state = var_it->second;
+                            auto val = var_it->second;
+                            for (auto i = 1ull; i < info.referenced_id_expression.size(); ++i)
+                            {
+                                val = val->get_property(info.referenced_id_expression[i]);
+                            }
+
+                            _state = val;
                             ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
                             return true;
                         }
@@ -419,7 +425,7 @@ namespace reaver
                 auto it = _map.find(name);
                 if (it == _map.end())
                 {
-                    assert(!"do something in this case too");
+                    return nullptr;
                 }
                 return it->second;
             }

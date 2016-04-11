@@ -1,13 +1,13 @@
-interesting_target = print(random_variable)
-random_variable = "random value"
+interesting_target = print(namespace.random_variable)
+namespace.random_variable = "random value"
 
-less_random_variable = "less random value"
-not_interesting_target = print(less_random_variable)
+namespace.less_random_variable = "less random value"
+not_interesting_target = print(namespace.less_random_variable)
 
-aggregate1 = aggregate(interesting_target, not_interesting_target)
+namespace.aggregate1 = aggregate(interesting_target, not_interesting_target)
 aggregate2 = aggregate(interesting_target, not_interesting_target)
 
-top_level = aggregate(aggregate1, aggregate2)
+top_level = aggregate(namespace.aggregate1, aggregate2)
 
 // system.language.cxx.version = "c++1z"
 // system.language.cxx.flags += "-Wall -Wextra -Wpedantic -Weffc++ -Werror"

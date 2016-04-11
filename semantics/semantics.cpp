@@ -35,13 +35,19 @@ std::shared_ptr<reaver::despayre::_v1::variable> reaver::despayre::_v1::analyze_
         },
 
         [&](const id_expression & expr) -> std::shared_ptr<variable> {
-            assert(expr.identifiers.size() == 1);
-
             auto var_it = ctx.variables.find(expr.identifiers.front().value.string);
-
             if (var_it != ctx.variables.end())
             {
-                return var_it->second;
+                auto val = var_it->second;
+                for (auto i = 1ull; i < expr.identifiers.size() && val; ++i)
+                {
+                    val = val->get_property(expr.identifiers[i].value.string);
+                }
+
+                if (val)
+                {
+                    return val;
+                }
             }
 
             auto unresolved = std::make_shared<delayed_variable>(
@@ -176,8 +182,44 @@ reaver::despayre::_v1::analysis_results reaver::despayre::_v1::analyze(const std
         switch (assignment.type)
         {
             case assignment_type::assignment:
-                assert(assignment.lhs.identifiers.size() == 1);
-                ctx.variables.emplace(assignment.lhs.identifiers.front().value.string, rhs_value);
+                if (assignment.lhs.identifiers.size() == 1)
+                {
+                    ctx.variables.emplace(assignment.lhs.identifiers.front().value.string, rhs_value);
+                }
+
+                else
+                {
+                    auto & lhs = assignment.lhs;
+                    auto it = ctx.variables.find(lhs.identifiers.front().value.string);
+
+                    auto val = [&]() -> std::shared_ptr<variable> {
+                        if (it == ctx.variables.end())
+                        {
+                            auto ns = std::make_shared<name_space>();
+                            ctx.variables.emplace(lhs.identifiers.front().value.string, ns);
+                            return std::move(ns);
+                        }
+
+                        return it->second;
+                    }();
+
+                    for (auto i = 1ull; i < lhs.identifiers.size() - 1; ++i)
+                    {
+                        auto nested = val->get_property(lhs.identifiers[i].value.string);
+                        if (nested)
+                        {
+                            val = nested;
+                            continue;
+                        }
+
+                        auto ns = std::make_shared<name_space>();
+                        val->add_property(lhs.identifiers[i].value.string, ns);
+                        val = ns;
+                    }
+
+                    val->add_property(lhs.identifiers.back().value.string, rhs_value);
+                }
+
                 if (rhs_value->type() && rhs_value->type()->is_target_type)
                 {
                     ctx.targets.emplace(assignment.lhs.identifiers.front().value.string, std::dynamic_pointer_cast<target>(rhs_value));
