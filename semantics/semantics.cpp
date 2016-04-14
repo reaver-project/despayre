@@ -222,7 +222,13 @@ reaver::despayre::_v1::analysis_results reaver::despayre::_v1::analyze(const std
 
                 if (rhs_value->type() && rhs_value->type()->is_target_type)
                 {
-                    ctx.targets.emplace(assignment.lhs.identifiers.front().value.string, std::dynamic_pointer_cast<target>(rhs_value));
+                    // need foldl/join
+                    auto name = assignment.lhs.identifiers.front().value.string;
+                    for (auto i = 1ull; i < assignment.lhs.identifiers.size(); ++i)
+                    {
+                        name += U"." + assignment.lhs.identifiers[i].value.string;
+                    }
+                    ctx.targets.emplace(std::move(name), std::dynamic_pointer_cast<target>(rhs_value));
                 }
 
             case assignment_type::addition:

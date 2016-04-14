@@ -26,6 +26,7 @@
 #include <fstream>
 
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <reaver/optional.h>
 
@@ -64,10 +65,21 @@ namespace reaver
                 }
                 else
                 {
-                    if (_variables.find(converted) != _variables.end())
+                    std::vector<std::u32string> identifiers;
+                    // need a better split
+                    boost::algorithm::split(identifiers, converted, boost::is_any_of(U"."));
+
+                    auto variable_it = _variables.find(identifiers.front());
+                    if (variable_it != _variables.end())
                     {
-                        auto variable = _variables.at(converted);
-                        if (variable->type()->is_target_type)
+                        auto variable = variable_it->second;
+
+                        for (auto i = 1ull; i < identifiers.size() && variable; ++i)
+                        {
+                            variable = variable->get_property(identifiers[i]);
+                        }
+
+                        if (variable && variable->type()->is_target_type)
                         {
                             target = variable->as_target();
                         }
