@@ -8,7 +8,7 @@ not_interesting_target = debug.print(namespace.less_random_variable)
 namespace.aggregate = aggregate
 
 namespace.aggregate1 = aggregate(interesting_target, not_interesting_target)
-aggregate2 = aggregate(interesting_target, not_interesting_target)
+aggregate2 = namespace.aggregate(interesting_target, not_interesting_target)
 
 top_level = aggregate(namespace.aggregate1, aggregate2)
 
