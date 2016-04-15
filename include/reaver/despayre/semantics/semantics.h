@@ -31,7 +31,7 @@ namespace reaver
     {
         struct analysis_results
         {
-            std::unordered_map<std::u32string, std::shared_ptr<variable>> variables;
+            std::shared_ptr<variable> variables;
             std::unordered_map<std::u32string, std::shared_ptr<target>> targets;
         };
 

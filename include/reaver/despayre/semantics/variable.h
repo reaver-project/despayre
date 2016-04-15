@@ -123,8 +123,8 @@ namespace reaver
 
             std::shared_ptr<variable> operator+(const std::shared_ptr<variable> & other) const
             {
-                auto clone = _clone();
-                return *clone += other;
+                auto copy = clone();
+                return *copy += other;
             }
 
             std::shared_ptr<variable> operator-=(const std::shared_ptr<variable> & other)
@@ -135,8 +135,8 @@ namespace reaver
 
             std::shared_ptr<variable> operator-(const std::shared_ptr<variable> & other) const
             {
-                auto clone = _clone();
-                return *clone -= other;
+                auto copy = clone();
+                return *copy -= other;
             }
 
             virtual void add_property(std::u32string name, std::shared_ptr<variable> value)
@@ -149,9 +149,9 @@ namespace reaver
                 throw invalid_get_property{ name };
             }
 
-        protected:
-            virtual std::shared_ptr<variable> _clone() const = 0;
+            virtual std::shared_ptr<variable> clone() const = 0;
 
+        protected:
             virtual std::shared_ptr<variable> _shared_this()
             {
                 return shared_from_this();
@@ -204,15 +204,15 @@ namespace reaver
             template<typename T, typename Base>
             class _clone_wrapper : public Base
             {
-            protected:
-                _clone_wrapper(type_identifier id) : Base{ id }
-                {
-                }
-
-                virtual std::shared_ptr<variable> _clone() const override
+                virtual std::shared_ptr<variable> clone() const override
                 {
                     auto & t = dynamic_cast<const T &>(*this);
                     return std::make_shared<T>(t);
+                }
+
+            protected:
+                _clone_wrapper(type_identifier id) : Base{ id }
+                {
                 }
             };
         }
@@ -263,7 +263,7 @@ namespace reaver
 
         struct semantic_context
         {
-            std::unordered_map<std::u32string, std::shared_ptr<variable>> variables;
+            std::shared_ptr<variable> variables;
             std::unordered_map<std::u32string, std::shared_ptr<target>> targets;
             std::unordered_set<std::shared_ptr<delayed_variable>> unresolved;
         };
@@ -297,21 +297,20 @@ namespace reaver
                     },
 
                     [&](_delayed_reference_info & info) {
-                        auto var_it = ctx.variables.find(info.referenced_id_expression.front());
-                        if (var_it != ctx.variables.end())
+                        auto val = ctx.variables;
+                        for (auto i = 0ull; i < info.referenced_id_expression.size() && val; ++i)
                         {
-                            auto val = var_it->second;
-                            for (auto i = 1ull; i < info.referenced_id_expression.size(); ++i)
-                            {
-                                val = val->get_property(info.referenced_id_expression[i]);
-                            }
-
-                            _state = val;
-                            ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
-                            return true;
+                            val = val->get_property(info.referenced_id_expression[i]);
                         }
 
-                        return false;
+                        if (!val)
+                        {
+                            return false;
+                        }
+
+                        _state = val;
+                        ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
+                        return true;
                     },
 
                     [&](_delayed_instantiation_info & info) {
@@ -345,12 +344,11 @@ namespace reaver
                 )));
             }
 
-        protected:
-            virtual std::shared_ptr<variable> _clone() const override
+            virtual std::shared_ptr<variable> clone() const override
             {
                 return get<0>(fmap(_state, make_overload_set(
                     [&](const std::shared_ptr<variable> & resolved) {
-                        return resolved->_clone();
+                        return resolved->clone();
                     },
 
                     [&](const _delayed_reference_info & ref_info) -> std::shared_ptr<variable> {
@@ -363,6 +361,7 @@ namespace reaver
                 )));
             }
 
+        protected:
             virtual std::shared_ptr<variable> _shared_this() override
             {
                 if (_state.index() == 2)

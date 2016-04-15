@@ -69,26 +69,22 @@ namespace reaver
                     // need a better split
                     boost::algorithm::split(identifiers, converted, boost::is_any_of(U"."));
 
-                    auto variable_it = _variables.find(identifiers.front());
-                    if (variable_it != _variables.end())
+                    auto variable = _variables;
+                    for (auto i = 0ull; i < identifiers.size() && variable; ++i)
                     {
-                        auto variable = variable_it->second;
+                        variable = variable->get_property(identifiers[i]);
+                    }
 
-                        for (auto i = 1ull; i < identifiers.size() && variable; ++i)
-                        {
-                            variable = variable->get_property(identifiers[i]);
-                        }
-
-                        if (variable && variable->type()->is_target_type)
-                        {
-                            target = variable->as_target();
-                        }
+                    if (variable && variable->type()->is_target_type)
+                    {
+                        target = variable->as_target();
                     }
                 }
 
                 if (!target)
                 {
-                    assert(!"what do");
+                    // TODO: exception type
+                    throw exception{ logger::fatal } << "could not find the requested target `" << target_name << "`.";
                 }
 
                 if (!target->built())
@@ -109,7 +105,7 @@ namespace reaver
             std::u32string _buildfile;
             std::vector<assignment> _parse_tree;
 
-            std::unordered_map<std::u32string, std::shared_ptr<variable>> _variables;
+            std::shared_ptr<variable> _variables;
             std::unordered_map<std::u32string, std::shared_ptr<target>> _targets;
 
             static std::u32string _load_file(const boost::filesystem::path & buildfile_path)

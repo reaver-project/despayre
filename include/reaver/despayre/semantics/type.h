@@ -27,6 +27,7 @@
 #include <vector>
 
 #include <boost/locale.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <reaver/exception.h>
 
@@ -64,7 +65,7 @@ namespace reaver
 
         namespace _detail
         {
-            void _save_identifier(std::u32string name, type_identifier id);
+            void _save_identifier(const std::vector<std::u32string> & name, type_identifier id);
             void _save_descriptor(type_identifier id, std::u32string name, std::string source_module, constructor type_constructor);
         }
 
@@ -81,7 +82,7 @@ namespace reaver
         };
 
         template<typename Tag>
-        type_identifier create_type(std::u32string name, std::string source_module, constructor type_constructor)
+        type_identifier create_type(std::u32string full_name, std::vector<std::u32string> name, std::string source_module, constructor type_constructor)
         {
             auto id = get_type_identifier<Tag>();
 
@@ -89,13 +90,27 @@ namespace reaver
             {
                 _detail::_save_identifier(name, id);
             }
-            _detail::_save_descriptor(id, std::move(name), std::move(source_module), type_constructor);
+            _detail::_save_descriptor(id, std::move(full_name), std::move(source_module), type_constructor);
 
             return id;
         }
 
-        std::shared_ptr<variable> instantiate(const std::u32string & name, std::vector<std::shared_ptr<variable>> variables);
+        template<typename Tag>
+        type_identifier create_type(std::u32string name, std::string source_module, constructor type_constructor)
+        {
+            std::vector<std::u32string> split;
+            // TODO: need better split
+            boost::algorithm::split(split, name, boost::is_any_of(U"."));
+
+            return create_type<Tag>(std::move(name), std::move(split), std::move(source_module), std::move(type_constructor));
+        }
+
+        struct semantic_context;
+
+        std::shared_ptr<variable> instantiate(const semantic_context & ctx, const std::vector<std::u32string> & name, std::vector<std::shared_ptr<variable>> variables);
         std::shared_ptr<variable> instantiate(type_identifier type, std::vector<std::shared_ptr<variable>> variables);
+
+        std::shared_ptr<variable> global_context();
     }}
 }
 
