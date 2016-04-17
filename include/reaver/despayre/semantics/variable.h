@@ -159,23 +159,11 @@ namespace reaver
                     return it->second(_shared_this(), other);
                 }
 
-                it = other->_operator_minus_call_table.find(type());
-                if (it != other->_operator_minus_call_table.end())
-                {
-                    return it->second(other, _shared_this());
-                }
-
                 // delayed_variable solution; it does currently look like a hack, doesn't it?
                 it = _shared_this()->_operator_minus_call_table.find(other->type());
                 if (it != _shared_this()->_operator_minus_call_table.end())
                 {
                     return it->second(_shared_this(), other);
-                }
-
-                it = other->_shared_this()->_operator_minus_call_table.find(type());
-                if (it != other->_shared_this()->_operator_minus_call_table.end())
-                {
-                    return it->second(other, _shared_this());
                 }
 
                 // TODO: throw an exception

@@ -13,7 +13,7 @@ namespace.aggregate = aggregate
 namespace.aggregate1 = aggregate(interesting_target, not_interesting_target)
 aggregate2 = namespace.aggregate(interesting_target, not_interesting_target)
 
-top_level = aggregate(namespace.aggregate1, aggregate2, combined.aggregate)
+top_level = aggregate(namespace.aggregate1, aggregate2, combined.aggregate, another_print)
 
 combined.aggregate = aggregate(combined.print1, combined.print2)
 combined.print1 = debug.print("abc" + "def" + "ghi")
