@@ -70,6 +70,27 @@ std::shared_ptr<reaver::despayre::_v1::variable> reaver::despayre::_v1::analyze_
             return instance;
         },
 
+        [&](const complex_expression & expr) -> std::shared_ptr<variable> {
+            auto lhs = analyze_expression(ctx, expr.base);
+
+            for (auto && op : expr.operations)
+            {
+                auto rhs = analyze_expression(ctx, op.operand);
+                switch (op.operation)
+                {
+                    case operation_type::addition:
+                        lhs = *lhs + rhs;
+                        break;
+
+                    case operation_type::removal:
+                        lhs = *lhs - rhs;
+                        break;
+                }
+            }
+
+            return lhs;
+        },
+
         [&](const auto & arg) -> std::shared_ptr<variable> {
             std::cout << typeid(arg).name() << std::endl;
             assert(0);

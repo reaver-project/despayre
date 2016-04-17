@@ -95,7 +95,7 @@ namespace reaver
             }
 
             template<typename T>
-            std::shared_ptr<T> as() const
+            std::shared_ptr<const T> as() const
             {
                 if (type() != get_type_identifier<T>())
                 {
@@ -115,28 +115,28 @@ namespace reaver
                 assert(!"nope");
             }
 
-            std::shared_ptr<variable> operator+=(const std::shared_ptr<variable> & other)
-            {
-                _operator_plus_call_table.at(other->_type_id)(*this, other);
-                return shared_from_this();
-            }
-
             std::shared_ptr<variable> operator+(const std::shared_ptr<variable> & other) const
             {
-                auto copy = clone();
-                return *copy += other;
-            }
+                auto it = _operator_plus_call_table.find(other->type());
+                if (it == _operator_plus_call_table.end())
+                {
+                    // TODO: throw an exception
+                    assert(0);
+                }
 
-            std::shared_ptr<variable> operator-=(const std::shared_ptr<variable> & other)
-            {
-                _operator_minus_call_table.at(other->_type_id)(*this, other);
-                return shared_from_this();
+                return it->second(_shared_this(), other);
             }
 
             std::shared_ptr<variable> operator-(const std::shared_ptr<variable> & other) const
             {
-                auto copy = clone();
-                return *copy -= other;
+                auto it = _operator_minus_call_table.find(other->type());
+                if (it == _operator_minus_call_table.end())
+                {
+                    // TODO: throw an exception
+                    assert(0);
+                }
+
+                return it->second(_shared_this(), other);
             }
 
             virtual void add_property(std::u32string name, std::shared_ptr<variable> value)
@@ -152,6 +152,10 @@ namespace reaver
             virtual std::shared_ptr<variable> clone() const = 0;
 
         protected:
+            using _op_lhs = const std::shared_ptr<const variable> &;
+            using _op_rhs = const std::shared_ptr<variable> &;
+            using _operator_type = std::shared_ptr<variable> (_op_lhs, _op_rhs);
+
             virtual std::shared_ptr<variable> _shared_this()
             {
                 return shared_from_this();
@@ -162,9 +166,17 @@ namespace reaver
                 return shared_from_this();
             }
 
-        private:
-            using _operator_type = void (const variable &, const std::shared_ptr<variable> &);
+            void _add_addition(type_identifier other_id, _operator_type handler)
+            {
+                _operator_plus_call_table.emplace(other_id, handler);
+            }
 
+            void _add_removal(type_identifier other_id, _operator_type handler)
+            {
+                _operator_minus_call_table.emplace(other_id, handler);
+            }
+
+        private:
             type_identifier _type_id;
 
             std::unordered_map<type_identifier, _operator_type *> _operator_plus_call_table;
@@ -228,6 +240,12 @@ namespace reaver
         public:
             string(std::u32string value) : clone_wrapper<string>{ get_type_identifier<string>() }, _value{ std::move(value) }
             {
+                _add_addition(get_type_identifier<string>(), [](_op_lhs lhs, _op_rhs rhs) -> std::shared_ptr<variable> {
+                    auto lhs_string = lhs->as<string>();
+                    auto rhs_string = rhs->as<string>();
+
+                    return std::make_shared<string>(lhs_string->value() + rhs_string->value());
+                });
             }
 
             string(const string &) = default;

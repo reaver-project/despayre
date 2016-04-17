@@ -205,9 +205,9 @@ std::vector<reaver::despayre::_v1::token> reaver::despayre::_v1::tokenize(const 
             }
 
             variable_length.push_back(*next);
-            variable_length.push_back(*get());
+            get();
 
-            generate_token(token_type::string, p, p + variable_length.size(), std::move(variable_length));
+            generate_token(token_type::string, p, p + variable_length.size(), std::move(variable_length).substr(1));
             continue;
         }
 

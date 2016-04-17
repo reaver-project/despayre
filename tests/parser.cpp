@@ -55,7 +55,7 @@ MAYFLY_ADD_TESTCASE("assignments", []()
     MAYFLY_CHECK(parse(UR"(a = "b")") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            string_node{ {}, { token_type::string, U"\"b\"", {} } }
+            string_node{ {}, { token_type::string, U"b", {} } }
         }
     });
 
@@ -66,7 +66,7 @@ MAYFLY_ADD_TESTCASE("assignments", []()
                 identifier{ {}, { token_type::identifier, U"b", {} } },
                 identifier{ {}, { token_type::identifier, U"c", {} } },
             }},
-            string_node{ {}, { token_type::string, U"\"b\"", {} } }
+            string_node{ {}, { token_type::string, U"b", {} } }
         }
     });
 
@@ -120,7 +120,7 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
                     identifier{ {}, { token_type::identifier, U"a", {} } }
                 }},
                 {
-                    string_node{ {}, { token_type::string, UR"("abc")", {} } }
+                    string_node{ {}, { token_type::string, UR"(abc)", {} } }
                 }
             }
         }
@@ -134,8 +134,8 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
                     identifier{ {}, { token_type::identifier, U"a", {} } }
                 }},
                 {
-                    string_node{ {}, { token_type::string, UR"("abc")", {} } },
-                    string_node{ {}, { token_type::string, UR"("def")", {} } }
+                    string_node{ {}, { token_type::string, UR"(abc)", {} } },
+                    string_node{ {}, { token_type::string, UR"(def)", {} } }
                 }
             }
         }
@@ -172,7 +172,7 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
                             id_expression{ {}, {
                                 identifier{ {}, { token_type::identifier, U"yz", {} } }
                             }},
-                            string_node{ {}, { token_type::string, UR"("uv")", {} } }
+                            string_node{ {}, { token_type::string, UR"(uv)", {} } }
                         }
                     }
                 }
