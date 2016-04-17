@@ -4,6 +4,9 @@ namespace.random_variable = "random value"
 namespace.less_random_variable = "less random value"
 not_interesting_target = debug.print(namespace.less_random_variable)
 
+// type constructor aliases also work before their definition...
+random = namespace.aggregate(interesting_target)
+
 // type constructors are first-class variables
 namespace.aggregate = aggregate
 

@@ -20,10 +20,10 @@
  *
  **/
 
+#include <unordered_map>
+
 #include "despayre/semantics/type.h"
 #include "despayre/semantics/variable.h"
-
-#include <unordered_map>
 
 using type_identifier = reaver::despayre::_v1::type_identifier;
 using type_descriptor = reaver::despayre::_v1::type_descriptor;
@@ -31,22 +31,6 @@ using variable_ptr = std::shared_ptr<reaver::despayre::_v1::variable>;
 
 namespace
 {
-    class _type_descriptor_variable : public reaver::despayre::clone_wrapper<_type_descriptor_variable>
-    {
-    public:
-        _type_descriptor_variable(type_identifier id) : reaver::despayre::clone_wrapper<_type_descriptor_variable>{ reaver::despayre::get_type_identifier<_type_descriptor_variable>() }, _identifier{ id }
-        {
-        }
-
-        type_identifier identifier() const
-        {
-            return _identifier;
-        }
-
-    private:
-        type_identifier _identifier;
-    };
-
     std::unordered_map<type_identifier, type_descriptor> _type_descriptors;
     std::shared_ptr<reaver::despayre::variable>_global_context = std::make_shared<reaver::despayre::name_space>();
     std::atomic<bool> _global_context_accessed{ false };
@@ -74,7 +58,7 @@ void reaver::despayre::_v1::_detail::_save_identifier(const std::vector<std::u32
         val = ns;
     }
 
-    val->add_property(name.back(), std::make_shared<_type_descriptor_variable>(id));
+    val->add_property(name.back(), std::make_shared<type_descriptor_variable>(id));
 }
 
 void reaver::despayre::_v1::_detail::_save_descriptor(type_identifier id, std::u32string name, std::string source_module, constructor type_constructor)
@@ -92,15 +76,15 @@ variable_ptr reaver::despayre::_v1::instantiate(const semantic_context & ctx, co
 
     if (!val)
     {
-        assert(!"asdf");
+        return std::make_shared<delayed_variable>(name, std::move(variables));
     }
 
-    if (val->type() != get_type_identifier<_type_descriptor_variable>())
+    if (val->type() != get_type_identifier<type_descriptor_variable>())
     {
         assert(!"fdsa");
     }
 
-    return instantiate(val->as<_type_descriptor_variable>()->identifier(), std::move(variables));
+    return instantiate(val->as<type_descriptor_variable>()->identifier(), std::move(variables));
 }
 
 variable_ptr reaver::despayre::_v1::instantiate(type_identifier id, std::vector<variable_ptr> variables)

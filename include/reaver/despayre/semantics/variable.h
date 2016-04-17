@@ -277,6 +277,22 @@ namespace reaver
             static auto _register_set = once([]{ create_type<string>(U"set", "<builtin>", nullptr); });
         }
 
+        class type_descriptor_variable : public reaver::despayre::clone_wrapper<type_descriptor_variable>
+        {
+        public:
+            type_descriptor_variable(type_identifier id) : reaver::despayre::clone_wrapper<type_descriptor_variable>{ reaver::despayre::get_type_identifier<type_descriptor_variable>() }, _identifier{ id }
+            {
+            }
+
+            type_identifier identifier() const
+            {
+                return _identifier;
+            }
+
+        private:
+            type_identifier _identifier;
+        };
+
         class delayed_variable;
 
         struct semantic_context
@@ -297,11 +313,15 @@ namespace reaver
             {
             }
 
+            delayed_variable(std::vector<std::u32string> type_name, std::vector<std::shared_ptr<variable>> arguments) : variable{ nullptr }, _state{ _delayed_type_info{ std::move(type_name), std::move(arguments) } }
+            {
+            }
+
             virtual type_identifier type() const override
             {
-                if (_state.index() == 2)
+                if (_state.index() == 3)
                 {
-                    return get<2>(_state)->type();
+                    return get<3>(_state)->type();
                 }
 
                 return nullptr;
@@ -335,12 +355,40 @@ namespace reaver
                         if (std::count_if(info.arguments.begin(), info.arguments.end(), [](auto && arg) { return arg->type() == nullptr; }) == 0)
                         {
                             _state = instantiate(info.actual_type, info.arguments);
-                            assert(get<2>(_state)->type());
+                            assert(get<3>(_state)->type());
                             ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
                             return true;
                         }
 
                         return false;
+                    },
+
+                    [&](_delayed_type_info & info) {
+                        // wait until all arguments are resolved
+                        if (std::count_if(info.arguments.begin(), info.arguments.end(), [](auto && variable) { return variable->type() == nullptr; }))
+                        {
+                            return false;
+                        }
+
+                        auto val = ctx.variables;
+                        for (auto i = 0ull; i < info.type_name.size() && val; ++i)
+                        {
+                            val = val->get_property(info.type_name[i]);
+                        }
+
+                        if (!val)
+                        {
+                            return false;
+                        }
+
+                        if (val->type() != get_type_identifier<type_descriptor_variable>())
+                        {
+                            assert(!"fdsa");
+                        }
+
+                        _state = instantiate(val->as<type_descriptor_variable>()->identifier(), std::move(info.arguments));
+                        ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
+                        return true;
                     }
                 )));
             }
@@ -352,11 +400,7 @@ namespace reaver
                         return resolved->as_target();
                     },
 
-                    [&](const _delayed_reference_info &) -> std::shared_ptr<target> {
-                        assert(!"");
-                    },
-
-                    [&](const _delayed_instantiation_info &) -> std::shared_ptr<target> {
+                    [&](const auto &) -> std::shared_ptr<target> {
                         assert(!"");
                     }
                 )));
@@ -375,6 +419,10 @@ namespace reaver
 
                     [&](const _delayed_instantiation_info & inst_info) -> std::shared_ptr<variable> {
                         return std::make_shared<delayed_variable>(inst_info.actual_type, inst_info.arguments);
+                    },
+
+                    [&](const _delayed_type_info & type_info) -> std::shared_ptr<variable> {
+                        return std::make_shared<delayed_variable>(type_info.type_name, type_info.arguments);
                     }
                 )));
             }
@@ -382,9 +430,9 @@ namespace reaver
         protected:
             virtual std::shared_ptr<variable> _shared_this() override
             {
-                if (_state.index() == 2)
+                if (_state.index() == 3)
                 {
-                    return get<2>(_state);
+                    return get<3>(_state);
                 }
 
                 return shared_from_this();
@@ -392,9 +440,9 @@ namespace reaver
 
             virtual std::shared_ptr<const variable> _shared_this() const override
             {
-                if (_state.index() == 2)
+                if (_state.index() == 3)
                 {
-                    return get<2>(_state);
+                    return get<3>(_state);
                 }
 
                 return shared_from_this();
@@ -412,9 +460,16 @@ namespace reaver
                 std::vector<std::u32string> referenced_id_expression;
             };
 
+            struct _delayed_type_info
+            {
+                std::vector<std::u32string> type_name;
+                std::vector<std::shared_ptr<variable>> arguments;
+            };
+
             variant<
                 _delayed_instantiation_info,
                 _delayed_reference_info,
+                _delayed_type_info,
                 std::shared_ptr<variable>
             > _state;
         };
