@@ -32,6 +32,7 @@
 
 #include "parser/parser.h"
 #include "semantics/semantics.h"
+#include "semantics/target.h"
 
 namespace reaver
 {

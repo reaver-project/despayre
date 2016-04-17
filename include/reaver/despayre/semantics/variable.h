@@ -31,7 +31,6 @@
 
 #include <reaver/once.h>
 #include <reaver/optional.h>
-#include <reaver/future.h>
 
 namespace reaver
 {
@@ -110,65 +109,10 @@ namespace reaver
                 return std::dynamic_pointer_cast<const T>(_shared_this());
             }
 
-            virtual std::shared_ptr<target> as_target()
-            {
-                if (type() && type()->is_target_type)
-                {
-                    return std::dynamic_pointer_cast<target>(_shared_this());
-                }
+            virtual std::shared_ptr<target> as_target();
 
-                assert(!"nope");
-            }
-
-            std::shared_ptr<variable> operator+(std::shared_ptr<variable> other)
-            {
-                auto it = _operator_plus_call_table.find(other->type());
-                if (it != _operator_plus_call_table.end())
-                {
-                    return it->second(_shared_this(), other);
-                }
-
-                it = other->_operator_plus_call_table.find(type());
-                if (it != other->_operator_plus_call_table.end())
-                {
-                    return it->second(other, _shared_this());
-                }
-
-                // delayed_variable solution; it does currently look like a hack, doesn't it?
-                it = _shared_this()->_operator_plus_call_table.find(other->type());
-                if (it != _shared_this()->_operator_plus_call_table.end())
-                {
-                    return it->second(_shared_this(), other);
-                }
-
-                it = other->_shared_this()->_operator_plus_call_table.find(type());
-                if (it != other->_shared_this()->_operator_plus_call_table.end())
-                {
-                    return it->second(other, _shared_this());
-                }
-
-                // TODO: throw an exception
-                assert(0);
-            }
-
-            std::shared_ptr<variable> operator-(std::shared_ptr<variable> other)
-            {
-                auto it = _operator_minus_call_table.find(other->type());
-                if (it != _operator_minus_call_table.end())
-                {
-                    return it->second(_shared_this(), other);
-                }
-
-                // delayed_variable solution; it does currently look like a hack, doesn't it?
-                it = _shared_this()->_operator_minus_call_table.find(other->type());
-                if (it != _shared_this()->_operator_minus_call_table.end())
-                {
-                    return it->second(_shared_this(), other);
-                }
-
-                // TODO: throw an exception
-                assert(0);
-            }
+            std::shared_ptr<variable> operator+(std::shared_ptr<variable> other);
+            std::shared_ptr<variable> operator-(std::shared_ptr<variable> other);
 
             virtual void add_property(std::u32string name, std::shared_ptr<variable> value)
             {
@@ -213,34 +157,6 @@ namespace reaver
             std::unordered_map<type_identifier, _operator_type *> _operator_minus_call_table;
         };
 
-        class target : public variable
-        {
-        public:
-            target(type_identifier type_id) : variable{ type_id }
-            {
-            }
-
-            virtual bool built() const = 0;
-
-            future<> build()
-            {
-                if (!_build_future)
-                {
-                    _build_future = when_all(fmap(dependencies(), [](auto && dep){ return dep->build(); }))
-                        .then([&](){ _build(); });
-                }
-
-                return *_build_future;
-            }
-
-            virtual std::vector<std::shared_ptr<target>> dependencies() const = 0;
-
-        protected:
-            virtual void _build() = 0;
-
-            optional<future<>> _build_future;
-        };
-
         namespace _detail
         {
             template<typename T, typename Base>
@@ -262,51 +178,6 @@ namespace reaver
         template<typename T>
         using clone_wrapper = _detail::_clone_wrapper<T, variable>;
 
-        template<typename T>
-        using target_clone_wrapper = _detail::_clone_wrapper<T, target>;
-
-        class string : public clone_wrapper<string>
-        {
-        public:
-            string(std::u32string value) : clone_wrapper<string>{ get_type_identifier<string>() }, _value{ std::move(value) }
-            {
-                _add_addition(get_type_identifier<string>(), [](_op_arg lhs, _op_arg rhs) -> std::shared_ptr<variable> {
-                    auto lhs_string = lhs->as<string>();
-                    auto rhs_string = rhs->as<string>();
-
-                    return std::make_shared<string>(lhs_string->value() + rhs_string->value());
-                });
-            }
-
-            string(const string &) = default;
-            string(string &&) = default;
-
-            const std::u32string & value() const
-            {
-                return _value;
-            }
-
-        private:
-            std::u32string _value;
-        };
-
-        class set : public clone_wrapper<set>
-        {
-        public:
-            set(std::unordered_set<std::shared_ptr<variable>> variables) : clone_wrapper<set>{ get_type_identifier<set>() }, _value{ std::move(variables) }
-            {
-            }
-
-        private:
-            std::unordered_set<std::shared_ptr<variable>> _value;
-        };
-
-        namespace _detail
-        {
-            static auto _register_string = once([]{ create_type<string>(U"string", "<builtin>", nullptr); });
-            static auto _register_set = once([]{ create_type<string>(U"set", "<builtin>", nullptr); });
-        }
-
         class type_descriptor_variable : public reaver::despayre::clone_wrapper<type_descriptor_variable>
         {
         public:
@@ -323,270 +194,12 @@ namespace reaver
             type_identifier _identifier;
         };
 
-        class delayed_variable;
-
         struct semantic_context
         {
             std::shared_ptr<variable> variables;
             std::unordered_map<std::u32string, std::shared_ptr<target>> targets;
             std::unordered_set<std::shared_ptr<delayed_variable>> unresolved;
         };
-
-        class delayed_variable : public variable
-        {
-        public:
-            delayed_variable(type_identifier actual_type, std::vector<std::shared_ptr<variable>> args) : variable{ nullptr }, _state{ _delayed_instantiation_info{ actual_type, std::move(args) } }
-            {
-            }
-
-            delayed_variable(std::vector<std::u32string> ref_id_expr) : variable{ nullptr }, _state{ _delayed_reference_info{ std::move(ref_id_expr) } }
-            {
-            }
-
-            delayed_variable(std::vector<std::u32string> type_name, std::vector<std::shared_ptr<variable>> arguments) : variable{ nullptr }, _state{ _delayed_type_info{ std::move(type_name), std::move(arguments) } }
-            {
-            }
-
-            delayed_variable(std::shared_ptr<variable> lhs, std::shared_ptr<variable> rhs, operation_type op) : variable{ nullptr }, _state{ _delayed_operation_info{ std::move(lhs), std::move(rhs), op } }
-            {
-            }
-
-            virtual type_identifier type() const override
-            {
-                if (_state.index() == 0)
-                {
-                    return get<0>(_state)->type();
-                }
-
-                return nullptr;
-            }
-
-            bool try_resolve(semantic_context & ctx)
-            {
-                return get<0>(fmap(_state, make_overload_set(
-                    [&](const std::shared_ptr<variable> &) {
-                        return false;
-                    },
-
-                    [&](_delayed_reference_info & info) {
-                        auto val = ctx.variables;
-                        for (auto i = 0ull; i < info.referenced_id_expression.size() && val; ++i)
-                        {
-                            val = val->get_property(info.referenced_id_expression[i]);
-                        }
-
-                        if (!val)
-                        {
-                            return false;
-                        }
-
-                        _state = val;
-                        ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
-                        return true;
-                    },
-
-                    [&](_delayed_instantiation_info & info) {
-                        if (std::count_if(info.arguments.begin(), info.arguments.end(), [](auto && arg) { return arg->type() == nullptr; }) == 0)
-                        {
-                            _state = instantiate(info.actual_type, info.arguments);
-                            assert(get<0>(_state)->type());
-                            ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
-                            return true;
-                        }
-
-                        return false;
-                    },
-
-                    [&](_delayed_type_info & info) {
-                        // wait until all arguments are resolved
-                        if (std::count_if(info.arguments.begin(), info.arguments.end(), [](auto && variable) { return variable->type() == nullptr; }))
-                        {
-                            return false;
-                        }
-
-                        auto val = ctx.variables;
-                        for (auto i = 0ull; i < info.type_name.size() && val; ++i)
-                        {
-                            val = val->get_property(info.type_name[i]);
-                        }
-
-                        if (!val)
-                        {
-                            return false;
-                        }
-
-                        if (val->type() != get_type_identifier<type_descriptor_variable>())
-                        {
-                            assert(!"fdsa");
-                        }
-
-                        _state = instantiate(val->as<type_descriptor_variable>()->identifier(), std::move(info.arguments));
-                        ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
-                        return true;
-                    },
-
-                    [&](_delayed_operation_info & info) {
-                        if (info.lhs->type() == nullptr || info.rhs->type() == nullptr)
-                        {
-                            return false;
-                        }
-
-                        switch (info.operation)
-                        {
-                            case operation_type::addition:
-                                _state = *info.lhs + info.rhs;
-                                break;
-
-                            case operation_type::removal:
-                                _state = *info.lhs - info.rhs;
-                                break;
-                        }
-
-                        ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
-                        return true;
-                    }
-                )));
-            }
-
-            virtual std::shared_ptr<target> as_target() override
-            {
-                return get<0>(fmap(_state, make_overload_set(
-                    [&](const std::shared_ptr<variable> & resolved) {
-                        return resolved->as_target();
-                    },
-
-                    [&](const auto &) -> std::shared_ptr<target> {
-                        assert(!"");
-                    }
-                )));
-            }
-
-            virtual std::shared_ptr<variable> clone() const override
-            {
-                return get<0>(fmap(_state, make_overload_set(
-                    [&](const std::shared_ptr<variable> & resolved) {
-                        return resolved->clone();
-                    },
-
-                    [&](const _delayed_reference_info & ref_info) -> std::shared_ptr<variable> {
-                        return std::make_shared<delayed_variable>(ref_info.referenced_id_expression);
-                    },
-
-                    [&](const _delayed_instantiation_info & inst_info) -> std::shared_ptr<variable> {
-                        return std::make_shared<delayed_variable>(inst_info.actual_type, inst_info.arguments);
-                    },
-
-                    [&](const _delayed_type_info & type_info) -> std::shared_ptr<variable> {
-                        return std::make_shared<delayed_variable>(type_info.type_name, type_info.arguments);
-                    },
-
-                    [&](const _delayed_operation_info & op_info) -> std::shared_ptr<variable> {
-                        return std::make_shared<delayed_variable>(op_info.lhs, op_info.rhs, op_info.operation);
-                    }
-                )));
-            }
-
-        protected:
-            virtual std::shared_ptr<variable> _shared_this() override
-            {
-                if (_state.index() == 0)
-                {
-                    return get<0>(_state);
-                }
-
-                return shared_from_this();
-            }
-
-            virtual std::shared_ptr<const variable> _shared_this() const override
-            {
-                if (_state.index() == 0)
-                {
-                    return get<0>(_state);
-                }
-
-                return shared_from_this();
-            }
-
-        private:
-            struct _delayed_instantiation_info
-            {
-                type_identifier actual_type;
-                std::vector<std::shared_ptr<variable>> arguments;
-            };
-
-            struct _delayed_reference_info
-            {
-                std::vector<std::u32string> referenced_id_expression;
-            };
-
-            struct _delayed_type_info
-            {
-                std::vector<std::u32string> type_name;
-                std::vector<std::shared_ptr<variable>> arguments;
-            };
-
-            struct _delayed_operation_info
-            {
-                std::shared_ptr<variable> lhs;
-                std::shared_ptr<variable> rhs;
-                operation_type operation;
-            };
-
-            variant<
-                std::shared_ptr<variable>,
-                _delayed_instantiation_info,
-                _delayed_reference_info,
-                _delayed_type_info,
-                _delayed_operation_info
-            > _state;
-        };
-
-        inline std::shared_ptr<variable> delayed_addition(std::shared_ptr<variable> lhs, std::shared_ptr<variable> rhs)
-        {
-            return std::make_shared<delayed_variable>(std::move(lhs), std::move(rhs), operation_type::addition);
-        }
-
-        inline std::shared_ptr<variable> delayed_removal(std::shared_ptr<variable> lhs, std::shared_ptr<variable> rhs)
-        {
-            return std::make_shared<delayed_variable>(std::move(lhs), std::move(rhs), operation_type::removal);
-        }
-
-        class name_space // silly keywords
-            : public clone_wrapper<name_space>
-        {
-        public:
-            name_space() : clone_wrapper<name_space>{ get_type_identifier<name_space>() }
-            {
-            }
-
-            virtual void add_property(std::u32string name, std::shared_ptr<variable> value) override
-            {
-                auto & variable = _map[std::move(name)];
-                if (variable)
-                {
-                    assert(!"do something in this case");
-                }
-                variable = std::move(value);
-            }
-
-            virtual std::shared_ptr<variable> get_property(const std::u32string & name) const override
-            {
-                auto it = _map.find(name);
-                if (it == _map.end())
-                {
-                    return nullptr;
-                }
-                return it->second;
-            }
-
-        private:
-            std::unordered_map<std::u32string, std::shared_ptr<variable>> _map;
-        };
-
-        namespace _detail
-        {
-            static auto _register_namespace = once([]{ create_type<name_space>(U"namespace", "<builtin>", nullptr); });
-        }
 
         template<typename T>
         std::shared_ptr<variable> default_constructor(std::vector<std::shared_ptr<variable>> variables)

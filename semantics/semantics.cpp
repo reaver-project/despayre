@@ -20,7 +20,11 @@
  *
  **/
 
-#include "../include/reaver/despayre/semantics/semantics.h"
+#include "despayre/semantics/semantics.h"
+#include "despayre/semantics/target.h"
+#include "despayre/semantics/string.h"
+#include "despayre/semantics/delayed_variable.h"
+#include "despayre/semantics/namespace.h"
 
 #include <reaver/prelude/functor.h>
 #include <reaver/overloads.h>

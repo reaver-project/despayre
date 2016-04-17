@@ -24,6 +24,8 @@
 
 #include "despayre/semantics/type.h"
 #include "despayre/semantics/variable.h"
+#include "despayre/semantics/delayed_variable.h"
+#include "despayre/semantics/namespace.h"
 
 using type_identifier = reaver::despayre::_v1::type_identifier;
 using type_descriptor = reaver::despayre::_v1::type_descriptor;
