@@ -86,6 +86,11 @@ std::shared_ptr<reaver::despayre::_v1::variable> reaver::despayre::_v1::analyze_
                         lhs = *lhs - rhs;
                         break;
                 }
+
+                if (lhs->type() == nullptr)
+                {
+                    ctx.unresolved.emplace(std::dynamic_pointer_cast<delayed_variable>(lhs));
+                }
             }
 
             return lhs;

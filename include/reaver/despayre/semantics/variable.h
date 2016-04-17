@@ -62,6 +62,9 @@ namespace reaver
         class delayed_variable;
         class target;
 
+        std::shared_ptr<variable> delayed_addition(std::shared_ptr<variable> lhs, std::shared_ptr<variable> rhs);
+        std::shared_ptr<variable> delayed_removal(std::shared_ptr<variable> lhs, std::shared_ptr<variable> rhs);
+
         // ...in Vapor this will be a typeclass
         // ...but doing that kind of thing in C++ manually is troublesome
         // and I really don't want to dive into boost.type_erasure or some other dark magic library right now
@@ -72,6 +75,8 @@ namespace reaver
 
             variable(type_identifier type_id) : _type_id{ type_id }
             {
+                _add_addition(nullptr, delayed_addition);
+                _add_removal(nullptr, delayed_removal);
             }
 
             virtual ~variable()
@@ -115,28 +120,66 @@ namespace reaver
                 assert(!"nope");
             }
 
-            std::shared_ptr<variable> operator+(const std::shared_ptr<variable> & other) const
+            std::shared_ptr<variable> operator+(std::shared_ptr<variable> other)
             {
                 auto it = _operator_plus_call_table.find(other->type());
-                if (it == _operator_plus_call_table.end())
+                if (it != _operator_plus_call_table.end())
                 {
-                    // TODO: throw an exception
-                    assert(0);
+                    return it->second(_shared_this(), other);
                 }
 
-                return it->second(_shared_this(), other);
+                it = other->_operator_plus_call_table.find(type());
+                if (it != other->_operator_plus_call_table.end())
+                {
+                    return it->second(other, _shared_this());
+                }
+
+                // delayed_variable solution; it does currently look like a hack, doesn't it?
+                it = _shared_this()->_operator_plus_call_table.find(other->type());
+                if (it != _shared_this()->_operator_plus_call_table.end())
+                {
+                    return it->second(_shared_this(), other);
+                }
+
+                it = other->_shared_this()->_operator_plus_call_table.find(type());
+                if (it != other->_shared_this()->_operator_plus_call_table.end())
+                {
+                    return it->second(other, _shared_this());
+                }
+
+                // TODO: throw an exception
+                assert(0);
             }
 
-            std::shared_ptr<variable> operator-(const std::shared_ptr<variable> & other) const
+            std::shared_ptr<variable> operator-(std::shared_ptr<variable> other)
             {
                 auto it = _operator_minus_call_table.find(other->type());
-                if (it == _operator_minus_call_table.end())
+                if (it != _operator_minus_call_table.end())
                 {
-                    // TODO: throw an exception
-                    assert(0);
+                    return it->second(_shared_this(), other);
                 }
 
-                return it->second(_shared_this(), other);
+                it = other->_operator_minus_call_table.find(type());
+                if (it != other->_operator_minus_call_table.end())
+                {
+                    return it->second(other, _shared_this());
+                }
+
+                // delayed_variable solution; it does currently look like a hack, doesn't it?
+                it = _shared_this()->_operator_minus_call_table.find(other->type());
+                if (it != _shared_this()->_operator_minus_call_table.end())
+                {
+                    return it->second(_shared_this(), other);
+                }
+
+                it = other->_shared_this()->_operator_minus_call_table.find(type());
+                if (it != other->_shared_this()->_operator_minus_call_table.end())
+                {
+                    return it->second(other, _shared_this());
+                }
+
+                // TODO: throw an exception
+                assert(0);
             }
 
             virtual void add_property(std::u32string name, std::shared_ptr<variable> value)
@@ -152,9 +195,8 @@ namespace reaver
             virtual std::shared_ptr<variable> clone() const = 0;
 
         protected:
-            using _op_lhs = const std::shared_ptr<const variable> &;
-            using _op_rhs = const std::shared_ptr<variable> &;
-            using _operator_type = std::shared_ptr<variable> (_op_lhs, _op_rhs);
+            using _op_arg = std::shared_ptr<variable>;
+            using _operator_type = std::shared_ptr<variable> (_op_arg, _op_arg);
 
             virtual std::shared_ptr<variable> _shared_this()
             {
@@ -240,7 +282,7 @@ namespace reaver
         public:
             string(std::u32string value) : clone_wrapper<string>{ get_type_identifier<string>() }, _value{ std::move(value) }
             {
-                _add_addition(get_type_identifier<string>(), [](_op_lhs lhs, _op_rhs rhs) -> std::shared_ptr<variable> {
+                _add_addition(get_type_identifier<string>(), [](_op_arg lhs, _op_arg rhs) -> std::shared_ptr<variable> {
                     auto lhs_string = lhs->as<string>();
                     auto rhs_string = rhs->as<string>();
 
@@ -317,11 +359,15 @@ namespace reaver
             {
             }
 
+            delayed_variable(std::shared_ptr<variable> lhs, std::shared_ptr<variable> rhs, operation_type op) : variable{ nullptr }, _state{ _delayed_operation_info{ std::move(lhs), std::move(rhs), op } }
+            {
+            }
+
             virtual type_identifier type() const override
             {
-                if (_state.index() == 3)
+                if (_state.index() == 0)
                 {
-                    return get<3>(_state)->type();
+                    return get<0>(_state)->type();
                 }
 
                 return nullptr;
@@ -355,7 +401,7 @@ namespace reaver
                         if (std::count_if(info.arguments.begin(), info.arguments.end(), [](auto && arg) { return arg->type() == nullptr; }) == 0)
                         {
                             _state = instantiate(info.actual_type, info.arguments);
-                            assert(get<3>(_state)->type());
+                            assert(get<0>(_state)->type());
                             ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
                             return true;
                         }
@@ -387,6 +433,27 @@ namespace reaver
                         }
 
                         _state = instantiate(val->as<type_descriptor_variable>()->identifier(), std::move(info.arguments));
+                        ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
+                        return true;
+                    },
+
+                    [&](_delayed_operation_info & info) {
+                        if (info.lhs->type() == nullptr || info.rhs->type() == nullptr)
+                        {
+                            return false;
+                        }
+
+                        switch (info.operation)
+                        {
+                            case operation_type::addition:
+                                _state = *info.lhs + info.rhs;
+                                break;
+
+                            case operation_type::removal:
+                                _state = *info.lhs - info.rhs;
+                                break;
+                        }
+
                         ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
                         return true;
                     }
@@ -423,6 +490,10 @@ namespace reaver
 
                     [&](const _delayed_type_info & type_info) -> std::shared_ptr<variable> {
                         return std::make_shared<delayed_variable>(type_info.type_name, type_info.arguments);
+                    },
+
+                    [&](const _delayed_operation_info & op_info) -> std::shared_ptr<variable> {
+                        return std::make_shared<delayed_variable>(op_info.lhs, op_info.rhs, op_info.operation);
                     }
                 )));
             }
@@ -430,9 +501,9 @@ namespace reaver
         protected:
             virtual std::shared_ptr<variable> _shared_this() override
             {
-                if (_state.index() == 3)
+                if (_state.index() == 0)
                 {
-                    return get<3>(_state);
+                    return get<0>(_state);
                 }
 
                 return shared_from_this();
@@ -440,9 +511,9 @@ namespace reaver
 
             virtual std::shared_ptr<const variable> _shared_this() const override
             {
-                if (_state.index() == 3)
+                if (_state.index() == 0)
                 {
-                    return get<3>(_state);
+                    return get<0>(_state);
                 }
 
                 return shared_from_this();
@@ -466,13 +537,31 @@ namespace reaver
                 std::vector<std::shared_ptr<variable>> arguments;
             };
 
+            struct _delayed_operation_info
+            {
+                std::shared_ptr<variable> lhs;
+                std::shared_ptr<variable> rhs;
+                operation_type operation;
+            };
+
             variant<
+                std::shared_ptr<variable>,
                 _delayed_instantiation_info,
                 _delayed_reference_info,
                 _delayed_type_info,
-                std::shared_ptr<variable>
+                _delayed_operation_info
             > _state;
         };
+
+        inline std::shared_ptr<variable> delayed_addition(std::shared_ptr<variable> lhs, std::shared_ptr<variable> rhs)
+        {
+            return std::make_shared<delayed_variable>(std::move(lhs), std::move(rhs), operation_type::addition);
+        }
+
+        inline std::shared_ptr<variable> delayed_removal(std::shared_ptr<variable> lhs, std::shared_ptr<variable> rhs)
+        {
+            return std::make_shared<delayed_variable>(std::move(lhs), std::move(rhs), operation_type::removal);
+        }
 
         class name_space // silly keywords
             : public clone_wrapper<name_space>

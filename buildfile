@@ -20,6 +20,11 @@ combined.print1 = debug.print("abc" + "def" + "ghi")
 combined.to_be_printed2 = "fde" + "cba"
 combined.print2 = debug.print(combined.to_be_printed2)
 
+another_print = debug.print(string1 + string2 + string3)
+string1 = "foo"
+string2 = "bar"
+string3 = "baz"
+
 // the actual buildfile for despayre itself
 system.language.cxx.version = "c++1z"
 system.language.cxx.flags = "-Wall"
