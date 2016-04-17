@@ -106,8 +106,6 @@ namespace reaver
             comma,
             plus,
             minus,
-            plus_equals,
-            minus_equals,
             equals,
             open_paren,
             close_paren,

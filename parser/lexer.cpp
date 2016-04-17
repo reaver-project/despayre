@@ -37,8 +37,6 @@ static auto token_types_init = []() -> reaver::unit
     token_types[+token_type::comma] = ",";
     token_types[+token_type::plus] = "+";
     token_types[+token_type::minus] = "-";
-    token_types[+token_type::plus_equals] = "+=";
-    token_types[+token_type::minus_equals] = "-=";
     token_types[+token_type::equals] = "=";
     token_types[+token_type::open_paren] = "(";
     token_types[+token_type::close_paren] = ")";
@@ -58,12 +56,6 @@ const std::unordered_map<char32_t, token_type> reaver::despayre::_v1::symbols1 =
 };
 
 const std::unordered_map<char32_t, std::unordered_map<char32_t, token_type>> reaver::despayre::_v1::symbols2 = {
-    { '+', {
-        { '=', token_type::plus_equals }
-    } },
-    { '-', {
-        { '=', token_type::minus_equals }
-    } }
 };
 
 std::vector<reaver::despayre::_v1::token> reaver::despayre::_v1::tokenize(const std::experimental::u32string_view buildfile, const boost::filesystem::path & filename)

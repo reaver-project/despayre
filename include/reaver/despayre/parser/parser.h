@@ -205,18 +205,10 @@ namespace reaver
         expression parse_argument(context & ctx, bool complex = true);
         expression parse_expression(context & ctx, bool complex = true);
 
-        enum class assignment_type
-        {
-            assignment,
-            addition,
-            removal
-        };
-
         struct assignment
         {
             range_type range;
             id_expression lhs;
-            assignment_type type;
             expression rhs;
 
             bool operator==(const assignment & other) const

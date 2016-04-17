@@ -12,8 +12,11 @@ aggregate2 = namespace.aggregate(interesting_target, not_interesting_target)
 
 top_level = aggregate(namespace.aggregate1, aggregate2)
 
-// system.language.cxx.version = "c++1z"
-// system.language.cxx.flags += "-Wall -Wextra -Wpedantic -Weffc++ -Werror"
+// the actual buildfile for despayre itself
+system.language.cxx.version = "c++1z"
+system.language.cxx.flags = "-Wall"
+system.compiler.gcc.flags = ""
+system.compiler.clang.flags = "-Wall -Wextra -Wpedantic -Weffc++ -Werror"
 
 // main_sources = files("main.cpp") + glob("main/**/*.cpp")
 // lib_sources = glob("**/*.cpp") - main_sources - test_sources

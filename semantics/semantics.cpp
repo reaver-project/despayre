@@ -175,45 +175,30 @@ reaver::despayre::_v1::analysis_results reaver::despayre::_v1::analyze(const std
     for (auto && assignment : parse_tree)
     {
         auto rhs_value = analyze_expression(ctx, assignment.rhs);
+        auto & lhs = assignment.lhs;
+        auto val = ctx.variables;
 
-        switch (assignment.type)
+        for (auto i = 0ull; i < lhs.identifiers.size() - 1; ++i)
         {
-            case assignment_type::assignment:
-                {
-                    auto & lhs = assignment.lhs;
-                    auto val = ctx.variables;
+            auto nested = val->get_property(lhs.identifiers[i].value.string);
+            if (nested)
+            {
+                val = nested;
+                continue;
+            }
 
-                    for (auto i = 0ull; i < lhs.identifiers.size() - 1; ++i)
-                    {
-                        auto nested = val->get_property(lhs.identifiers[i].value.string);
-                        if (nested)
-                        {
-                            val = nested;
-                            continue;
-                        }
+            auto ns = std::make_shared<name_space>();
+            val->add_property(lhs.identifiers[i].value.string, ns);
+            val = ns;
+        }
 
-                        auto ns = std::make_shared<name_space>();
-                        val->add_property(lhs.identifiers[i].value.string, ns);
-                        val = ns;
-                    }
+        val->add_property(lhs.identifiers.back().value.string, rhs_value);
 
-                    val->add_property(lhs.identifiers.back().value.string, rhs_value);
-
-                    if (rhs_value->type() && rhs_value->type()->is_target_type)
-                    {
-                        ctx.targets.emplace(
-                            boost::join(fmap(assignment.lhs.identifiers, [](auto && i) { return i.value.string; }), U"."),
-                            std::dynamic_pointer_cast<target>(rhs_value));
-                    }
-                }
-
-                break;
-
-            case assignment_type::addition:
-                assert(1);
-
-            case assignment_type::removal:
-                assert(2);
+        if (rhs_value->type() && rhs_value->type()->is_target_type)
+        {
+            ctx.targets.emplace(
+                boost::join(fmap(assignment.lhs.identifiers, [](auto && i) { return i.value.string; }), U"."),
+                std::dynamic_pointer_cast<target>(rhs_value));
         }
     }
 
