@@ -22,15 +22,15 @@
 
 #pragma once
 
-#include "type.h"
-#include "../parser/parser.h"
-
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
 
 #include <reaver/once.h>
 #include <reaver/optional.h>
+
+#include "type.h"
+#include "../parser/parser.h"
 
 namespace reaver
 {
@@ -78,9 +78,7 @@ namespace reaver
                 _add_removal(nullptr, delayed_removal);
             }
 
-            virtual ~variable()
-            {
-            }
+            virtual ~variable() = default;
 
             virtual type_identifier type() const
             {
@@ -198,7 +196,7 @@ namespace reaver
         {
             std::shared_ptr<variable> variables;
             std::unordered_map<std::u32string, std::shared_ptr<target>> targets;
-            std::unordered_set<std::shared_ptr<delayed_variable>> unresolved;
+            std::unordered_map<std::shared_ptr<delayed_variable>, range_type> unresolved;
         };
 
         template<typename T>

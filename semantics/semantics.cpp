@@ -20,14 +20,14 @@
  *
  **/
 
+#include <reaver/prelude/functor.h>
+#include <reaver/overloads.h>
+
 #include "despayre/semantics/semantics.h"
 #include "despayre/semantics/target.h"
 #include "despayre/semantics/string.h"
 #include "despayre/semantics/delayed_variable.h"
 #include "despayre/semantics/namespace.h"
-
-#include <reaver/prelude/functor.h>
-#include <reaver/overloads.h>
 
 using var_map = std::unordered_map<std::u32string, std::shared_ptr<reaver::despayre::_v1::variable>>;
 
@@ -53,7 +53,7 @@ std::shared_ptr<reaver::despayre::_v1::variable> reaver::despayre::_v1::analyze_
             auto unresolved = std::make_shared<delayed_variable>(
                 fmap(expr.identifiers, [](auto && ident) { return ident.value.string; })
             );
-            ctx.unresolved.emplace(unresolved);
+            ctx.unresolved.emplace(unresolved, expr.range);
             return unresolved;
         },
 
@@ -68,7 +68,7 @@ std::shared_ptr<reaver::despayre::_v1::variable> reaver::despayre::_v1::analyze_
             {
                 // ugly; figure out a better way to do this
                 // without spilling semantic_context to the constructor
-                ctx.unresolved.emplace(std::dynamic_pointer_cast<delayed_variable>(instance));
+                ctx.unresolved.emplace(std::dynamic_pointer_cast<delayed_variable>(instance), inst.range);
             }
 
             return instance;
@@ -93,7 +93,7 @@ std::shared_ptr<reaver::despayre::_v1::variable> reaver::despayre::_v1::analyze_
 
                 if (lhs->type() == nullptr)
                 {
-                    ctx.unresolved.emplace(std::dynamic_pointer_cast<delayed_variable>(lhs));
+                    ctx.unresolved.emplace(std::dynamic_pointer_cast<delayed_variable>(lhs), range_type{ expr.range.start(), op.range.end() });
                 }
             }
 
@@ -239,7 +239,7 @@ reaver::despayre::_v1::analysis_results reaver::despayre::_v1::analyze(const std
 
         for (auto && u : ctx.unresolved)
         {
-            if (u->try_resolve(ctx))
+            if (u.first->try_resolve(ctx))
             {
                 break;
             }
@@ -248,7 +248,7 @@ reaver::despayre::_v1::analysis_results reaver::despayre::_v1::analyze(const std
 
     if (!ctx.unresolved.empty())
     {
-        throw exception{ logger::fatal } << "some variables could not have been resolved";
+        throw exception{ logger::fatal } << "some variables could not have been resolved; first at " << ctx.unresolved.begin()->second;
     }
 
     return { std::move(ctx.variables), std::move(ctx.targets) };
