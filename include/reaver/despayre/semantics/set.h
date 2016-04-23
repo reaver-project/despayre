@@ -68,7 +68,7 @@ namespace reaver
 
         namespace _detail
         {
-            static auto _register_set = once([]{ create_type<string>(U"set", "<builtin>", nullptr); });
+            static auto _register_set = once([]{ create_type<set>(U"set", "<builtin>", nullptr); });
         }
     }}
 }
