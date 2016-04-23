@@ -226,6 +226,28 @@ namespace reaver
                 return std::make_shared<T>(std::move(variables));
             };
         }
+
+        template<typename Type, typename F>
+        decltype(auto) type_dispatch(std::shared_ptr<variable> var, id<Type>, F && callback)
+        {
+            if (var->type() == get_type_identifier<Type>())
+            {
+                return std::forward<F>(callback)(var->as<Type>());
+            }
+
+            assert(!"invalid dispatch");
+        }
+
+        template<typename Type, typename F, typename... Tail, typename std::enable_if<(sizeof...(Tail) > 0), int>::type = 0>
+        decltype(auto) type_dispatch(std::shared_ptr<variable> var, id<Type>, F && head_callback, Tail &&... tail)
+        {
+            if (var->type() == get_type_identifier<Type>())
+            {
+                return std::forward<F>(head_callback)(var->as<Type>());
+            }
+
+            return type_dispatch(std::move(var), std::forward<Tail>(tail)...);
+        }
     }}
 }
 
