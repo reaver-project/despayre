@@ -33,19 +33,33 @@ using variable_ptr = std::shared_ptr<reaver::despayre::_v1::variable>;
 
 namespace
 {
-    std::unordered_map<type_identifier, type_descriptor> _type_descriptors;
-    std::shared_ptr<reaver::despayre::variable>_global_context = std::make_shared<reaver::despayre::name_space>();
-    std::atomic<bool> _global_context_accessed{ false };
+    auto & _type_descriptors()
+    {
+        static std::unordered_map<type_identifier, type_descriptor> type_descriptors = {};
+        return type_descriptors;
+    }
+
+    auto & _global_context()
+    {
+        static std::shared_ptr<reaver::despayre::variable> global_context = std::make_shared<reaver::despayre::name_space>();
+        return global_context;
+    }
+
+    auto & _global_context_accessed()
+    {
+        static std::atomic<bool> global_context_accessed{ false };
+        return global_context_accessed;
+    }
 }
 
 void reaver::despayre::_v1::_detail::_save_identifier(const std::vector<std::u32string> & name, type_identifier id)
 {
-    if (_global_context_accessed)
+    if (_global_context_accessed())
     {
         assert(!"throw a runtime error; this is an invalid use of the library");
     }
 
-    auto val = _global_context;
+    auto val = _global_context();
     for (auto i = 0ull; i < name.size() - 1; ++i)
     {
         auto nested = val->get_property(name[i]);
@@ -65,7 +79,7 @@ void reaver::despayre::_v1::_detail::_save_identifier(const std::vector<std::u32
 
 void reaver::despayre::_v1::_detail::_save_descriptor(type_identifier id, std::u32string name, std::string source_module, constructor type_constructor)
 {
-    _type_descriptors.emplace(id, type_descriptor{ std::move(name), std::move(source_module), type_constructor });
+    _type_descriptors().emplace(id, type_descriptor{ std::move(name), std::move(source_module), type_constructor });
 }
 
 variable_ptr reaver::despayre::_v1::instantiate(const semantic_context & ctx, const std::vector<std::u32string> & name, std::vector<variable_ptr> variables)
@@ -91,13 +105,13 @@ variable_ptr reaver::despayre::_v1::instantiate(const semantic_context & ctx, co
 
 variable_ptr reaver::despayre::_v1::instantiate(type_identifier id, std::vector<variable_ptr> variables)
 {
-    return _type_descriptors[id].type_constructor(std::move(variables));
+    return _type_descriptors()[id].type_constructor(std::move(variables));
 }
 
 variable_ptr reaver::despayre::_v1::global_context()
 {
-    auto copy = _global_context->clone();
-    _global_context_accessed = true;
+    auto copy = _global_context()->clone();
+    _global_context_accessed() = true;
     return copy;
 }
 
