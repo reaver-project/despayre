@@ -2,7 +2,7 @@ CXX = g++
 LD = g++
 CXXFLAGS += -Os -Wall -std=c++1z -MD -fPIC -Wno-unused-parameter -g -pthread -Wno-unused-variable
 SOFLAGS += -shared
-LDFLAGS += -pthread -ldespayre
+LDFLAGS += -pthread
 LIBRARIES += -lboost_filesystem -lboost_system -ldl
 
 SOURCES := $(shell find . -name "*.cpp" ! -wholename "./tests/*" ! -name "main.cpp" ! -wholename "./main/*" ! -name "buildlist.cpp")
@@ -26,7 +26,7 @@ all: $(EXECUTABLE)
 library: $(LIBRARY)
 
 $(EXECUTABLE): $(MAINOBJ) $(LIBRARY)
-	$(LD) $(CXXFLAGS) $(LDFLAGS) $(MAINOBJ) -o $@ $(LIBRARIES)
+	$(LD) $(CXXFLAGS) $(LDFLAGS) $(MAINOBJ) -o $@ $(LIBRARIES) -L. -ldespayre
 
 $(LIBRARY): $(OBJECTS)
 	$(LD) $(CXXFLAGS) $(SOFLAGS) $(OBJECTS) -o $@ $(LIBRARIES)
@@ -34,7 +34,7 @@ $(LIBRARY): $(OBJECTS)
 test: ./tests/test
 
 ./tests/test: $(TESTOBJ) $(LIBRARY)
-	$(LD) $(CXXFLAGS) $(LDFLAGS) $(TESTOBJ) -o $@ $(LIBRARIES) -lboost_system -lboost_iostreams -lboost_program_options -lboost_filesystem -ldl -pthread -L.
+	$(LD) $(CXXFLAGS) $(LDFLAGS) $(TESTOBJ) -o $@ $(LIBRARIES) -lboost_system -lboost_iostreams -lboost_program_options -lboost_filesystem -ldl -pthread -L. -ldespayre
 
 install: $(LIBRARY) $(EXECUTABLE)
 	@cp $(EXECUTABLE) $(DESTDIR)$(BINDIR)/$(EXECUTABLE)
