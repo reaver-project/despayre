@@ -144,18 +144,13 @@ namespace reaver
 
         id_expression parse_id_expression(context & ctx);
 
-        struct complex_expression;
+        struct expression;
 
         struct instantiation
         {
             range_type range;
             id_expression type_name;
-            std::vector<reaver::variant<
-                string_node,
-                id_expression,
-                instantiation,
-                recursive_wrapper<complex_expression>
-            >> arguments;
+            std::vector<expression> arguments;
 
             bool operator==(const instantiation & other) const
             {
@@ -163,11 +158,10 @@ namespace reaver
             }
         };
 
-        using expression = variant<
+        using simple_expression = variant<
             string_node,
             id_expression,
-            instantiation,
-            recursive_wrapper<complex_expression>
+            instantiation
         >;
 
         enum class operation_type
@@ -180,7 +174,7 @@ namespace reaver
         {
             range_type range;
             operation_type operation;
-            expression operand;
+            simple_expression operand;
 
             bool operator==(const struct operation & other) const
             {
@@ -190,20 +184,20 @@ namespace reaver
 
         std::vector<operation> parse_operations(context & ctx);
 
-        struct complex_expression
+        struct expression
         {
             range_type range;
-            expression base;
+            simple_expression base;
             std::vector<operation> operations;
 
-            bool operator==(const complex_expression & other) const
+            bool operator==(const expression & other) const
             {
                 return base == other.base && operations == other.operations;
             }
         };
 
-        expression parse_argument(context & ctx, bool complex = true);
-        expression parse_expression(context & ctx, bool complex = true);
+        simple_expression parse_simple_expression(context & ctx);
+        expression parse_expression(context & ctx);
 
         struct assignment
         {

@@ -43,9 +43,9 @@ reaver::despayre::assignment reaver::despayre::_v1::parse_assignment(reaver::des
     auto id = parse_id_expression(ctx);
 
     expect(ctx, token_type::equals);
-    auto value = parse_argument(ctx);
+    auto value = parse_expression(ctx);
 
-    return { range_type{ id.range.start(), get<0>(fmap(value, [](auto && v){ return v.range.end(); })) }, std::move(id), std::move(value) };
+    return { range_type{ id.range.start(), value.range.end() }, std::move(id), std::move(value) };
 }
 
 reaver::despayre::id_expression reaver::despayre::_v1::parse_id_expression(reaver::despayre::context & ctx)
@@ -82,7 +82,7 @@ std::vector<reaver::despayre::operation> reaver::despayre::_v1::parse_operations
     while (peeked && (peeked->type == token_type::plus || peeked->type == token_type::minus))
     {
         operation_type operation = expect(ctx, peeked->type).type == token_type::plus ? operation_type::addition : operation_type::removal;
-        auto operand = parse_expression(ctx);
+        auto operand = parse_simple_expression(ctx);
         auto end = get<0>(fmap(operand, [](auto && op){ return op.range.end(); }));
         operations.push_back({ range_type{ peeked->range.start(), end }, operation, std::move(operand) });
 
@@ -92,21 +92,22 @@ std::vector<reaver::despayre::operation> reaver::despayre::_v1::parse_operations
     return operations;
 }
 
-reaver::despayre::expression reaver::despayre::_v1::parse_argument(reaver::despayre::context & ctx, bool complex)
+reaver::despayre::expression reaver::despayre::_v1::parse_expression(reaver::despayre::context & ctx)
 {
-    auto expr = parse_expression(ctx);
+    auto expr = parse_simple_expression(ctx);
     auto peeked = peek(ctx);
-    if (complex && peeked && (peeked->type == token_type::plus || peeked->type == token_type::minus))
+    auto start = get<0>(fmap(expr, [](auto && expr){ return expr.range.start(); }));
+    if (peeked && (peeked->type == token_type::plus || peeked->type == token_type::minus))
     {
         auto operations = parse_operations(ctx);
-        auto start = get<0>(fmap(expr, [](auto && expr){ return expr.range.start(); }));
-        return complex_expression{ range_type{ start, operations.back().range.end() }, std::move(expr), std::move(operations) };
+        return expression{ range_type{ start, operations.back().range.end() }, std::move(expr), std::move(operations) };
     }
 
-    return expr;
+    auto end = get<0>(fmap(expr, [](auto && expr){ return expr.range.end(); }));
+    return expression{ range_type{ start, end }, expr, {} };
 }
 
-reaver::despayre::expression reaver::despayre::_v1::parse_expression(reaver::despayre::context & ctx, bool complex)
+reaver::despayre::simple_expression reaver::despayre::_v1::parse_simple_expression(reaver::despayre::context & ctx)
 {
     auto peeked = peek(ctx);
     if (!peeked)
@@ -124,20 +125,20 @@ reaver::despayre::expression reaver::despayre::_v1::parse_expression(reaver::des
         case token_type::identifier:
         {
             auto id = parse_id_expression(ctx);
-            std::vector<expression> arguments;
 
             if (peek(ctx, token_type::open_paren))
             {
                 expect(ctx, token_type::open_paren);
 
+                std::vector<expression> arguments;
                 if (peek(ctx) && peek(ctx)->type != token_type::close_paren)
                 {
-                    arguments.push_back(parse_argument(ctx, complex));
+                    arguments.push_back(parse_expression(ctx));
 
                     while (peek(ctx) && peek(ctx)->type != token_type::close_paren)
                     {
                         expect(ctx, token_type::comma);
-                        arguments.push_back(parse_argument(ctx, complex));
+                        arguments.push_back(parse_expression(ctx));
                     }
                 }
 

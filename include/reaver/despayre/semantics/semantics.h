@@ -36,8 +36,9 @@ namespace reaver
         };
 
         analysis_results analyze(const std::vector<assignment> & parse_tree);
-
         std::shared_ptr<variable> analyze_expression(semantic_context & ctx, const expression & expr);
+        std::shared_ptr<variable> analyze_simple_expression(semantic_context & ctx, const simple_expression & expr);
+        void register_builtins(semantic_context & ctx);
     }}
 }
 

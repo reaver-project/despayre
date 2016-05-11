@@ -31,7 +31,34 @@
 
 using var_map = std::unordered_map<std::u32string, std::shared_ptr<reaver::despayre::_v1::variable>>;
 
-std::shared_ptr<reaver::despayre::_v1::variable> reaver::despayre::_v1::analyze_expression(semantic_context & ctx, const reaver::despayre::_v1::expression & expr)
+std::shared_ptr<reaver::despayre::_v1::variable> reaver::despayre::_v1::analyze_expression(reaver::despayre::_v1::semantic_context & ctx, const reaver::despayre::_v1::expression & expr)
+{
+    auto lhs = analyze_simple_expression(ctx, expr.base);
+
+    for (auto && op : expr.operations)
+    {
+        auto rhs = analyze_simple_expression(ctx, op.operand);
+        switch (op.operation)
+        {
+            case operation_type::addition:
+                lhs = *lhs + rhs;
+                break;
+
+            case operation_type::removal:
+                lhs = *lhs - rhs;
+                break;
+        }
+
+        if (lhs->type() == nullptr)
+        {
+            ctx.unresolved.emplace(std::dynamic_pointer_cast<delayed_variable>(lhs), range_type{ expr.range.start(), op.range.end() });
+        }
+    }
+
+    return lhs;
+}
+
+std::shared_ptr<reaver::despayre::_v1::variable> reaver::despayre::_v1::analyze_simple_expression(semantic_context & ctx, const reaver::despayre::_v1::simple_expression & expr)
 {
     return get<0>(fmap(expr, make_overload_set(
         [&](const string_node & str) -> std::shared_ptr<variable> {
@@ -74,31 +101,6 @@ std::shared_ptr<reaver::despayre::_v1::variable> reaver::despayre::_v1::analyze_
             return instance;
         },
 
-        [&](const complex_expression & expr) -> std::shared_ptr<variable> {
-            auto lhs = analyze_expression(ctx, expr.base);
-
-            for (auto && op : expr.operations)
-            {
-                auto rhs = analyze_expression(ctx, op.operand);
-                switch (op.operation)
-                {
-                    case operation_type::addition:
-                        lhs = *lhs + rhs;
-                        break;
-
-                    case operation_type::removal:
-                        lhs = *lhs - rhs;
-                        break;
-                }
-
-                if (lhs->type() == nullptr)
-                {
-                    ctx.unresolved.emplace(std::dynamic_pointer_cast<delayed_variable>(lhs), range_type{ expr.range.start(), op.range.end() });
-                }
-            }
-
-            return lhs;
-        },
 
         [&](const auto & arg) -> std::shared_ptr<variable> {
             std::cout << typeid(arg).name() << std::endl;

@@ -48,14 +48,18 @@ MAYFLY_ADD_TESTCASE("assignments", []()
     MAYFLY_CHECK(parse(UR"(a = b)") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } }
+            expression{
+                {}, id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } }, {}
+            }
         }
     });
 
     MAYFLY_CHECK(parse(UR"(a = "b")") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            string_node{ {}, { token_type::string, U"b", {} } }
+            expression{
+                {}, string_node{ {}, { token_type::string, U"b", {} } }, {}
+            }
         }
     });
 
@@ -66,7 +70,9 @@ MAYFLY_ADD_TESTCASE("assignments", []()
                 identifier{ {}, { token_type::identifier, U"b", {} } },
                 identifier{ {}, { token_type::identifier, U"c", {} } },
             }},
-            string_node{ {}, { token_type::string, U"b", {} } }
+            expression{
+                {}, string_node{ {}, { token_type::string, U"b", {} } }, {}
+            }
         }
     });
 
@@ -77,10 +83,12 @@ MAYFLY_ADD_TESTCASE("assignments", []()
                 identifier{ {}, { token_type::identifier, U"b", {} } },
                 identifier{ {}, { token_type::identifier, U"c", {} } },
             }},
-            id_expression{ {}, {
-                identifier{ {}, { token_type::identifier, U"d", {} } },
-                identifier{ {}, { token_type::identifier, U"e", {} } },
-            }}
+            expression{
+                {}, id_expression{ {}, {
+                    identifier{ {}, { token_type::identifier, U"d", {} } },
+                    identifier{ {}, { token_type::identifier, U"e", {} } },
+                }}, {}
+            }
         }
     });
 });
@@ -92,9 +100,11 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
     MAYFLY_CHECK(parse(UR"(a = b())") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            instantiation{ {},
-                id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } },
-                {}
+            expression{
+                {}, instantiation{ {},
+                    id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } },
+                    {}
+                }, {}
             }
         }
     });
@@ -102,12 +112,14 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
     MAYFLY_CHECK(parse(UR"(a = a.b())") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            instantiation{ {},
-                id_expression{ {}, {
-                    identifier{ {}, { token_type::identifier, U"a", {} } },
-                    identifier{ {}, { token_type::identifier, U"b", {} } }
-                }},
-                {}
+            expression{
+                {}, instantiation{ {},
+                    id_expression{ {}, {
+                        identifier{ {}, { token_type::identifier, U"a", {} } },
+                        identifier{ {}, { token_type::identifier, U"b", {} } }
+                    }},
+                    {}
+                }, {}
             }
         }
     });
@@ -115,13 +127,15 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
     MAYFLY_CHECK(parse(UR"(a = a("abc"))") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            instantiation{ {},
-                id_expression{ {}, {
-                    identifier{ {}, { token_type::identifier, U"a", {} } }
-                }},
-                {
-                    string_node{ {}, { token_type::string, UR"(abc)", {} } }
-                }
+            expression{
+                {}, instantiation{ {},
+                    id_expression{ {}, {
+                        identifier{ {}, { token_type::identifier, U"a", {} } }
+                    }},
+                    {
+                        expression{ {}, string_node{ {}, { token_type::string, UR"(abc)", {} } }, {} }
+                    }
+                }, {}
             }
         }
     });
@@ -129,14 +143,16 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
     MAYFLY_CHECK(parse(UR"(a = a("abc", "def"))") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            instantiation{ {},
-                id_expression{ {}, {
-                    identifier{ {}, { token_type::identifier, U"a", {} } }
-                }},
-                {
-                    string_node{ {}, { token_type::string, UR"(abc)", {} } },
-                    string_node{ {}, { token_type::string, UR"(def)", {} } }
-                }
+            expression{
+                {}, instantiation{ {},
+                    id_expression{ {}, {
+                        identifier{ {}, { token_type::identifier, U"a", {} } }
+                    }},
+                    {
+                        expression{ {}, string_node{ {}, { token_type::string, UR"(abc)", {} } }, {} },
+                        expression{ {}, string_node{ {}, { token_type::string, UR"(def)", {} } }, {} }
+                    }
+                }, {}
             }
         }
     });
@@ -144,13 +160,15 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
     MAYFLY_CHECK(parse(UR"(a = a(abc))") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            instantiation{ {},
-                id_expression{ {}, {
-                    identifier{ {}, { token_type::identifier, U"a", {} } }
-                }},
-                {
-                    id_expression{ {}, { identifier{ {}, { token_type::identifier, U"abc", {} } } } }
-                }
+            expression{
+                {}, instantiation{ {},
+                    id_expression{ {}, {
+                        identifier{ {}, { token_type::identifier, U"a", {} } }
+                    }},
+                    {
+                        expression{ {}, id_expression{ {}, { identifier{ {}, { token_type::identifier, U"abc", {} } } } }, {} }
+                    }
+                }, {}
             }
         }
     });
@@ -158,24 +176,28 @@ MAYFLY_ADD_TESTCASE("instantiations", []()
     MAYFLY_CHECK(parse(UR"(a = a(abc, x(yz, "uv")))") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            instantiation{ {},
-                id_expression{ {}, {
-                    identifier{ {}, { token_type::identifier, U"a", {} } }
-                }},
-                {
-                    id_expression{ {}, { identifier{ {}, { token_type::identifier, U"abc", {} } } } },
-                    instantiation{ {},
-                        id_expression{ {}, {
-                            identifier{ {}, { token_type::identifier, U"x", {} } }
-                        }},
-                        {
-                            id_expression{ {}, {
-                                identifier{ {}, { token_type::identifier, U"yz", {} } }
-                            }},
-                            string_node{ {}, { token_type::string, UR"(uv)", {} } }
+            expression{
+                {}, instantiation{ {},
+                    id_expression{ {}, {
+                        identifier{ {}, { token_type::identifier, U"a", {} } }
+                    }},
+                    {
+                        expression{ {}, id_expression{ {}, { identifier{ {}, { token_type::identifier, U"abc", {} } } } }, {} },
+                        expression{
+                            {}, instantiation{ {},
+                                id_expression{ {}, {
+                                    identifier{ {}, { token_type::identifier, U"x", {} } }
+                                }},
+                                {
+                                    expression{ {}, id_expression{ {}, {
+                                        identifier{ {}, { token_type::identifier, U"yz", {} } }
+                                    }}, {} },
+                                    expression{ {}, string_node{ {}, { token_type::string, UR"(uv)", {} } }, {} }
+                                }
+                            }, {}
                         }
                     }
-                }
+                }, {}
             }
         }
     });
@@ -188,11 +210,11 @@ MAYFLY_ADD_TESTCASE("multiple assignments", []()
     MAYFLY_CHECK(parse(UR"(a = b c = d)") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } }
+            expression{ {}, id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } }, {} }
         },
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"c", {} } } } },
-            id_expression{ {}, { identifier{ {}, { token_type::identifier, U"d", {} } } } }
+            expression{ {}, id_expression{ {}, { identifier{ {}, { token_type::identifier, U"d", {} } } } }, {} }
         }
     });
 });
@@ -204,7 +226,7 @@ MAYFLY_ADD_TESTCASE("complex expressions", []()
     MAYFLY_CHECK(parse(UR"(a = b + c)") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            complex_expression{ {},
+            expression{ {},
                 id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } },
                 {
                     operation{ {}, operation_type::addition, { id_expression{ {}, { identifier{ {}, { token_type::identifier, U"c", {} } } } } } }
@@ -216,7 +238,7 @@ MAYFLY_ADD_TESTCASE("complex expressions", []()
     MAYFLY_CHECK(parse(UR"(a = b - c)") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            complex_expression{ {},
+            expression{ {},
                 id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } },
                 {
                     operation{ {}, operation_type::removal, { id_expression{ {}, { identifier{ {}, { token_type::identifier, U"c", {} } } } } } }
@@ -228,7 +250,7 @@ MAYFLY_ADD_TESTCASE("complex expressions", []()
     MAYFLY_CHECK(parse(UR"(a = b + c + d)") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            complex_expression{ {},
+            expression{ {},
                 id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } },
                 {
                     operation{ {}, operation_type::addition, { id_expression{ {}, { identifier{ {}, { token_type::identifier, U"c", {} } } } } } },
@@ -241,7 +263,7 @@ MAYFLY_ADD_TESTCASE("complex expressions", []()
     MAYFLY_CHECK(parse(UR"(a = b + c - d)") == parse_type{
         assignment{ {},
             id_expression{ {}, { identifier{ {}, { token_type::identifier, U"a", {} } } } },
-            complex_expression{ {},
+            expression{ {},
                 id_expression{ {}, { identifier{ {}, { token_type::identifier, U"b", {} } } } },
                 {
                     operation{ {}, operation_type::addition, { id_expression{ {}, { identifier{ {}, { token_type::identifier, U"c", {} } } } } } },
