@@ -20,40 +20,45 @@
  *
  **/
 
-#pragma once
-
-#include <string>
+#include <reaver/plugin.h>
 
 #include "variable.h"
+#include "namespace.h"
+#include "context.h"
+#include "string.h"
 
 namespace reaver
 {
     namespace despayre { inline namespace _v1
     {
-        class string : public variable
+        struct import_tag {};
+
+        class plugin_namespace : public variable
         {
         public:
-            string(std::u32string value) : variable{ get_type_identifier<string>() }, _value{ std::move(value) }
+            plugin_namespace(std::shared_ptr<plugin> plugin) : variable{ get_type_identifier<plugin_namespace>() }, _plugin{ std::move(plugin) }
             {
-                _add_addition(get_type_identifier<string>(), [](_op_arg lhs, _op_arg rhs) -> std::shared_ptr<variable> {
-                    auto lhs_string = lhs->as<string>();
-                    auto rhs_string = rhs->as<string>();
-
-                    return std::make_shared<string>(lhs_string->value() + rhs_string->value());
-                });
-            }
-
-            string(const string &) = default;
-            string(string &&) = default;
-
-            const std::u32string & value() const
-            {
-                return _value;
             }
 
         private:
-            std::u32string _value;
+            std::shared_ptr<plugin> _plugin;
         };
+
+        auto generate_import(semantic_context & ctx)
+        {
+            return [&ctx](std::vector<std::shared_ptr<variable>> args)
+            {
+                assert(args.size() == 2);
+                assert(args[0]->type() == get_type_identifier<string>());
+                assert(args[1]->type() == get_type_identifier<name_space>());
+
+                auto plugin = open_library("despayre." + utf8(args[0]->as<string>()->value()));
+                plugin->get_symbol<void (semantic_context &)>("init_semantic")(ctx);
+                ctx.plugin_initializers.emplace(plugin, "init_runtime");
+
+                return std::make_shared<plugin_namespace>(std::move(plugin));
+            };
+        }
     }}
 }
 

@@ -30,6 +30,7 @@
 #include <reaver/optional.h>
 
 #include "type.h"
+#include "context.h"
 #include "../parser/parser.h"
 
 namespace reaver
@@ -122,8 +123,6 @@ namespace reaver
                 throw invalid_get_property{ name };
             }
 
-            virtual std::shared_ptr<variable> clone() const = 0;
-
         protected:
             using _op_arg = std::shared_ptr<variable>;
             using _operator_type = std::shared_ptr<variable> (_op_arg, _op_arg);
@@ -155,31 +154,10 @@ namespace reaver
             std::unordered_map<type_identifier, _operator_type *> _operator_minus_call_table;
         };
 
-        namespace _detail
-        {
-            template<typename T, typename Base>
-            class _clone_wrapper : public Base
-            {
-                virtual std::shared_ptr<variable> clone() const override
-                {
-                    auto & t = dynamic_cast<const T &>(*this);
-                    return std::make_shared<T>(t);
-                }
-
-            protected:
-                _clone_wrapper(type_identifier id) : Base{ id }
-                {
-                }
-            };
-        }
-
-        template<typename T>
-        using clone_wrapper = _detail::_clone_wrapper<T, variable>;
-
-        class type_descriptor_variable : public reaver::despayre::clone_wrapper<type_descriptor_variable>
+        class type_descriptor_variable : public variable
         {
         public:
-            type_descriptor_variable(type_identifier id) : reaver::despayre::clone_wrapper<type_descriptor_variable>{ reaver::despayre::get_type_identifier<type_descriptor_variable>() }, _identifier{ id }
+            type_descriptor_variable(type_identifier id) : variable{ reaver::despayre::get_type_identifier<type_descriptor_variable>() }, _identifier{ id }
             {
             }
 
@@ -190,13 +168,6 @@ namespace reaver
 
         private:
             type_identifier _identifier;
-        };
-
-        struct semantic_context
-        {
-            std::shared_ptr<variable> variables;
-            std::unordered_map<std::u32string, std::shared_ptr<target>> targets;
-            std::unordered_map<std::shared_ptr<delayed_variable>, range_type> unresolved;
         };
 
         template<typename T>

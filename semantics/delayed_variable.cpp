@@ -49,7 +49,7 @@ bool reaver::despayre::_v1::delayed_variable::try_resolve(reaver::despayre::_v1:
         [&](_delayed_instantiation_info & info) {
             if (std::count_if(info.arguments.begin(), info.arguments.end(), [](auto && arg) { return arg->type() == nullptr; }) == 0)
             {
-                _state = instantiate(info.actual_type, info.arguments);
+                _state = instantiate(ctx, info.actual_type, info.arguments);
                 assert(get<0>(_state)->type());
                 ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
                 return true;
@@ -81,7 +81,7 @@ bool reaver::despayre::_v1::delayed_variable::try_resolve(reaver::despayre::_v1:
                 assert(!"fdsa");
             }
 
-            _state = instantiate(val->as<type_descriptor_variable>()->identifier(), std::move(info.arguments));
+            _state = instantiate(ctx, val->as<type_descriptor_variable>()->identifier(), std::move(info.arguments));
             ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
             return true;
         },
@@ -105,31 +105,6 @@ bool reaver::despayre::_v1::delayed_variable::try_resolve(reaver::despayre::_v1:
 
             ctx.unresolved.erase(ctx.unresolved.find(std::dynamic_pointer_cast<delayed_variable>(shared_from_this())));
             return true;
-        }
-    )));
-}
-
-std::shared_ptr<reaver::despayre::_v1::variable> reaver::despayre::_v1::delayed_variable::clone() const
-{
-    return get<0>(fmap(_state, make_overload_set(
-        [&](const std::shared_ptr<variable> & resolved) {
-            return resolved->clone();
-        },
-
-        [&](const _delayed_reference_info & ref_info) -> std::shared_ptr<variable> {
-            return std::make_shared<delayed_variable>(ref_info.referenced_id_expression);
-        },
-
-        [&](const _delayed_instantiation_info & inst_info) -> std::shared_ptr<variable> {
-            return std::make_shared<delayed_variable>(inst_info.actual_type, inst_info.arguments);
-        },
-
-        [&](const _delayed_type_info & type_info) -> std::shared_ptr<variable> {
-            return std::make_shared<delayed_variable>(type_info.type_name, type_info.arguments);
-        },
-
-        [&](const _delayed_operation_info & op_info) -> std::shared_ptr<variable> {
-            return std::make_shared<delayed_variable>(op_info.lhs, op_info.rhs, op_info.operation);
         }
     )));
 }

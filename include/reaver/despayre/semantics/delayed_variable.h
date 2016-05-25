@@ -72,8 +72,6 @@ namespace reaver
                 )));
             }
 
-            virtual std::shared_ptr<variable> clone() const override;
-
         protected:
             virtual std::shared_ptr<variable> _shared_this() override
             {

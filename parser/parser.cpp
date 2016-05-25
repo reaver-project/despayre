@@ -104,7 +104,7 @@ reaver::despayre::expression reaver::despayre::_v1::parse_expression(reaver::des
     }
 
     auto end = get<0>(fmap(expr, [](auto && expr){ return expr.range.end(); }));
-    return expression{ range_type{ start, end }, expr, {} };
+    return expression{ range_type{ start, end }, std::move(expr), {} };
 }
 
 reaver::despayre::simple_expression reaver::despayre::_v1::parse_simple_expression(reaver::despayre::context & ctx)

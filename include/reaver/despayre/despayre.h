@@ -48,9 +48,7 @@ namespace reaver
             despayre(std::u32string buildfile_contents, boost::filesystem::path buildfile_path, boost::filesystem::path cwd = boost::filesystem::current_path()) : _buildfile_path{ std::move(buildfile_path) }, _working_directory{ std::move(cwd) }, _buildfile{ std::move(buildfile_contents) }
             {
                 _parse_tree = parse(tokenize(_buildfile, _buildfile_path));
-                auto analyzed = analyze(_parse_tree);
-                _variables = std::move(analyzed.variables);
-                _targets = std::move(analyzed.targets);
+                _semantic_context = analyze(_parse_tree);
             }
 
             // TODO: this also should return a future
@@ -60,9 +58,9 @@ namespace reaver
                 std::u32string converted = boost::locale::conv::utf_to_utf<char32_t>(target_name);
 
                 std::shared_ptr<target> target;
-                if (_targets.find(converted) != _targets.end())
+                if (_semantic_context.targets.find(converted) != _semantic_context.targets.end())
                 {
-                    target = _targets.at(converted);
+                    target = _semantic_context.targets.at(converted);
                 }
                 else
                 {
@@ -70,7 +68,7 @@ namespace reaver
                     // need a better split
                     boost::algorithm::split(identifiers, converted, boost::is_any_of(U"."));
 
-                    auto variable = _variables;
+                    auto variable = _semantic_context.variables;
                     for (auto i = 0ull; i < identifiers.size() && variable; ++i)
                     {
                         variable = variable->get_property(identifiers[i]);
@@ -88,9 +86,39 @@ namespace reaver
                     throw exception{ logger::fatal } << "could not find the requested target `" << target_name << "`.";
                 }
 
-                if (!target->built())
+                auto ctx = make_runtime_context(boost::filesystem::current_path() / "output");
+                for (const auto & init : _semantic_context.plugin_initializers)
                 {
-                    auto future = target->build();
+                    init(ctx);
+                }
+
+                // count all the target to be built
+                // do it twice so lazy targets can get it right
+                std::unordered_set<std::shared_ptr<class target>> deps;
+
+                function<void (const std::shared_ptr<class target> &)> visit = [&](const auto & target) {
+                    deps.insert(target);
+                    for (auto && dep : target->dependencies(ctx))
+                    {
+                        if (deps.find(dep) == deps.end())
+                        {
+                            visit(dep);
+                        }
+                    }
+                };
+
+                visit(target);
+                for (auto && dep : deps)
+                {
+                    dep->invalidate();
+                }
+                deps.clear();
+
+                visit(target);
+
+                if (!target->built(ctx))
+                {
+                    auto future = target->build(ctx);
                     while (!future.try_get())
                     {
                         std::this_thread::yield();
@@ -106,8 +134,7 @@ namespace reaver
             std::u32string _buildfile;
             std::vector<assignment> _parse_tree;
 
-            std::shared_ptr<variable> _variables;
-            std::unordered_map<std::u32string, std::shared_ptr<target>> _targets;
+            semantic_context _semantic_context;
 
             static std::u32string _load_file(const boost::filesystem::path & buildfile_path)
             {

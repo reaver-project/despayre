@@ -29,10 +29,10 @@ namespace reaver
     namespace despayre { inline namespace _v1
     {
         class name_space // silly keywords
-            : public clone_wrapper<name_space>
+            : public variable
         {
         public:
-            name_space() : clone_wrapper<name_space>{ get_type_identifier<name_space>() }
+            name_space() : variable{ get_type_identifier<name_space>() }
             {
             }
 
@@ -59,11 +59,6 @@ namespace reaver
         private:
             std::unordered_map<std::u32string, std::shared_ptr<variable>> _map;
         };
-
-        namespace _detail
-        {
-            static auto _register_namespace = once([]{ create_type<name_space>(U"namespace", "<builtin>", nullptr); });
-        }
     }}
 }
 

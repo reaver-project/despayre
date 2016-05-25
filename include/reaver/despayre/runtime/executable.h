@@ -22,20 +22,18 @@
 
 #pragma once
 
-#include "target.h"
-#include "set.h"
-#include "string.h"
+#include "../semantics/target.h"
+#include "../semantics/string.h"
 #include "files.h"
-#include "delayed_variable.h" // FIXME: make_type_checking_constructor forces this include
 
 namespace reaver
 {
     namespace despayre { inline namespace _v
     {
-        class executable : public target_clone_wrapper<executable>
+        class executable : public target
         {
         public:
-            executable(std::vector<std::shared_ptr<variable>> arguments) : target_clone_wrapper<executable>{ get_type_identifier<executable>() }
+            executable(std::vector<std::shared_ptr<variable>> arguments) : target{ get_type_identifier<executable>() }
             {
                 for (auto && arg : arguments)
                 {
@@ -46,47 +44,33 @@ namespace reaver
                         },
 
                         id<files>(), [&](std::shared_ptr<files> arg) {
-                            std::copy(arg->value().begin(), arg->value().end(), std::back_inserter(_deps));
+                            _deps.push_back(std::move(arg));
                             return unit{};
                         }
                     );
                 }
             }
 
-            virtual std::vector<std::shared_ptr<target>> dependencies() const override
+            virtual const std::vector<std::shared_ptr<target>> & dependencies(context_ptr) override
             {
                 return _deps;
             }
 
-            virtual bool built() const override
+            virtual bool built(context_ptr) override
             {
                 return false;
             }
 
         protected:
-            virtual void _build() override
+            virtual void _build(context_ptr ctx) override
             {
-                logger::dlog() << "Building executable " << utf8(_name) << ".";
+                logger::dlog() << "Building executable " << filesystem::make_relative(ctx->output_directory / utf8(_name)).string() << ".";
             }
 
         private:
             std::u32string _name;
             std::vector<std::shared_ptr<target>> _deps;
         };
-
-        namespace _detail
-        {
-            static auto _register_executable = reaver::once([]{
-                create_type<executable>(
-                    U"executable",
-                    "<builtin>",
-                    make_type_checking_constructor<executable>({
-                        { get_type_identifier<set>(), {} },
-                        { get_type_identifier<string>(), 1 }
-                    })
-                );
-            });
-        }
     }}
 }
 

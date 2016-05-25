@@ -25,6 +25,7 @@
 #include <reaver/future.h>
 
 #include "variable.h"
+#include "../runtime/context.h"
 
 namespace reaver
 {
@@ -37,29 +38,39 @@ namespace reaver
             {
             }
 
-            virtual bool built() const = 0;
+            virtual bool built(context_ptr) = 0;
 
-            future<> build()
+            future<> build(context_ptr ctx)
             {
-                if (!_build_future)
+                auto this_target = _shared_this()->as_target();
+                if (this_target->built(ctx))
                 {
-                    _build_future = when_all(fmap(dependencies(), [](auto && dep){ return dep->build(); }))
-                        .then([&](){ _build(); });
+                    return make_ready_future();
                 }
 
-                return *_build_future;
+                auto & build_future = ctx->build_futures[this_target];
+                if (!build_future)
+                {
+                    build_future = when_all(fmap(dependencies(ctx), [ctx](auto && dep){ return dep->build(ctx); }))
+                        .then([&, ctx](){ _build(ctx); });
+                }
+
+                return *build_future;
             }
 
-            virtual std::vector<std::shared_ptr<target>> dependencies() const = 0;
+            virtual const std::vector<std::shared_ptr<target>> & dependencies(context_ptr)
+            {
+                static std::vector<std::shared_ptr<target>> empty;
+                return empty;
+            }
+
+            virtual void invalidate()
+            {
+            }
 
         protected:
-            virtual void _build() = 0;
-
-            optional<future<>> _build_future;
+            virtual void _build(context_ptr) = 0;
         };
-
-        template<typename T>
-        using target_clone_wrapper = _detail::_clone_wrapper<T, target>;
     }}
 }
 

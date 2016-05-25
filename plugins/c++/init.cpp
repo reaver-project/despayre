@@ -20,6 +20,29 @@
  *
  **/
 
-#include "despayre/semantics/files.h"
-#include "despayre/semantics/executable.h"
+#include "despayre/semantics/context.h"
+#include "despayre/runtime/context.h"
+
+#include "filetype.h"
+
+namespace reaver
+{
+    namespace despayre
+    {
+        namespace cxx { inline namespace _v1
+        {
+            extern "C" void init_semantic(reaver::despayre::_v1::semantic_context & ctx)
+            {
+            }
+
+            extern "C" void init_runtime(reaver::despayre::_v1::context_ptr ctx)
+            {
+                auto comp = std::make_shared<cxx_compiler>();
+                ctx->compilers.register_compiler(".cpp", comp);
+                ctx->compilers.register_compiler(".cxx", comp);
+                ctx->compilers.register_compiler(".c++", comp);
+            }
+        }}
+    }
+}
 

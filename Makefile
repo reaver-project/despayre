@@ -5,7 +5,7 @@ SOFLAGS += -shared
 LDFLAGS += -pthread
 LIBRARIES += -lboost_filesystem -lboost_system -ldl
 
-SOURCES := $(shell find . -name "*.cpp" ! -wholename "./tests/*" ! -name "main.cpp" ! -wholename "./main/*" ! -name "buildlist.cpp")
+SOURCES := $(shell find . -name "*.cpp" ! -wholename "./tests/*" ! -name "main.cpp" ! -wholename "./main/*"  ! -wholename "./plugins/*" ! -name "buildlist.cpp")
 MAINSRC := $(shell find ./main/ -name "*.cpp") main.cpp
 TESTSRC := $(shell find ./tests/ -name "*.cpp")
 OBJECTS := $(SOURCES:.cpp=.o)
@@ -57,6 +57,8 @@ clean:
 	@rm -f tests/test
 
 .PHONY: install clean library test
+
+-include $(shell find plugins -name "*.mk")
 
 -include $(SOURCES:.cpp=.d)
 -include $(MAINSRC:.cpp=.d)

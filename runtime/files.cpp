@@ -20,19 +20,6 @@
  *
  **/
 
-#pragma once
-
-#include "../parser/parser.h"
-#include "variable.h"
-
-namespace reaver
-{
-    namespace despayre { inline namespace _v1
-    {
-        semantic_context analyze(const std::vector<assignment> & parse_tree);
-        std::shared_ptr<variable> analyze_expression(semantic_context & ctx, const expression & expr);
-        std::shared_ptr<variable> analyze_simple_expression(semantic_context & ctx, const simple_expression & expr);
-        void register_builtins(semantic_context & ctx);
-    }}
-}
+#include "despayre/runtime/files.h"
+#include "despayre/runtime/executable.h"
 

@@ -22,38 +22,40 @@
 
 #pragma once
 
-#include <string>
+#include <memory>
+#include <unordered_map>
 
-#include "variable.h"
+#include <boost/filesystem.hpp>
+
+#include <reaver/optional.h>
+#include <reaver/future.h>
+
+#include "compiler.h" // declares context_ptr
 
 namespace reaver
 {
     namespace despayre { inline namespace _v1
     {
-        class string : public variable
+        class target;
+
+        struct runtime_context
         {
-        public:
-            string(std::u32string value) : variable{ get_type_identifier<string>() }, _value{ std::move(value) }
+            runtime_context(boost::filesystem::path output_dir) : output_directory{ std::move(output_dir) }
             {
-                _add_addition(get_type_identifier<string>(), [](_op_arg lhs, _op_arg rhs) -> std::shared_ptr<variable> {
-                    auto lhs_string = lhs->as<string>();
-                    auto rhs_string = rhs->as<string>();
-
-                    return std::make_shared<string>(lhs_string->value() + rhs_string->value());
-                });
             }
 
-            string(const string &) = default;
-            string(string &&) = default;
+            const boost::filesystem::path output_directory;
+            std::unordered_map<std::shared_ptr<target>, optional<future<>>> build_futures;
+            std::unordered_map<boost::filesystem::path, std::shared_ptr<target>, boost::hash<boost::filesystem::path>> generated_files;
+            std::unordered_map<boost::filesystem::path, std::shared_ptr<target>, boost::hash<boost::filesystem::path>> file_targets;
 
-            const std::u32string & value() const
-            {
-                return _value;
-            }
-
-        private:
-            std::u32string _value;
+            compiler_configuration compilers;
         };
+
+        inline context_ptr make_runtime_context(boost::filesystem::path output_dir)
+        {
+            return std::make_shared<runtime_context>(std::move(output_dir));
+        }
     }}
 }
 

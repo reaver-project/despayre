@@ -22,17 +22,23 @@
 
 #pragma once
 
-#include "../parser/parser.h"
-#include "variable.h"
+#include "despayre/runtime/context.h"
 
 namespace reaver
 {
-    namespace despayre { inline namespace _v1
+    namespace despayre
     {
-        semantic_context analyze(const std::vector<assignment> & parse_tree);
-        std::shared_ptr<variable> analyze_expression(semantic_context & ctx, const expression & expr);
-        std::shared_ptr<variable> analyze_simple_expression(semantic_context & ctx, const simple_expression & expr);
-        void register_builtins(semantic_context & ctx);
-    }}
+        namespace cxx { inline namespace _v1
+        {
+            class cxx_compiler : public compiler
+            {
+            public:
+                virtual std::vector<boost::filesystem::path> inputs(context_ptr, const boost::filesystem::path &) const override;
+                virtual std::vector<boost::filesystem::path> outputs(context_ptr, const boost::filesystem::path &) const override;
+
+                virtual void build(context_ptr, const boost::filesystem::path &) const override;
+            };
+        }}
+    }
 }
 
