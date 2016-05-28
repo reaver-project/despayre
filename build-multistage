@@ -13,15 +13,16 @@ rm -rf stage-2
 rm -rf stage-3
 
 # build stage 1
-make -j ${processor_count} -l ${processor_count} despayre CC=${CC} CXX=${CXX} LD=${LD}
+make -j ${processor_count} -l ${processor_count} CC=${CC} CXX=${CXX} LD=${LD}
 
 # build stage 2 with stage 1
-LD_LIBRARY_PATH="${PWD}:${LD_LIBRARY_PATH}" ./despayre despayre --output-dir=stage-2
+LD_LIBRARY_PATH="${PWD}:${LD_LIBRARY_PATH}" ./despayre despayre plugins --output-dir=stage-2
 
 # build stage 3 with stage 1
-LD_LIBRARY_PATH="${PWD}/stage-2:${LD_LIBRARY_PATH}" ./stage-2/despayre despayre --output-dir=stage-3
+LD_LIBRARY_PATH="${PWD}/stage-2:${LD_LIBRARY_PATH}" ./stage-2/despayre despayre plugins --output-dir=stage-3
 
 # compare stage 2 and 3
 cmp --silent stage-2/despayre stage-3/despayre || { echo '`despayre` binary differs between stages 2 and 3'; exit 1 }
 cmp --silent stage-3/libdespayre.so stage-3/libdespayre.so || { echo '`libdespayre.so` binary differs between stages 2 and 3'; exit 1 }
+cmp --silent stage-3/libdespayre.c++.so stage-3/libdespayre.c++.so || { echo '`libdespayre.c++.so` binary differs between stages 2 and 3'; exit 1 }
 

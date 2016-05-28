@@ -22,6 +22,9 @@
 
 #include <reaver/filesystem.h>
 
+#include <boost/process.hpp>
+#include <boost/iostreams/stream.hpp>
+
 #include "filetype.h"
 
 using reaver::despayre::_v1::context_ptr;
@@ -49,6 +52,28 @@ std::vector<boost::filesystem::path> reaver::despayre::cxx::_v1::cxx_compiler::o
 
 void reaver::despayre::cxx::_v1::cxx_compiler::build(context_ptr ctx, const boost::filesystem::path & path) const
 {
-    logger::dlog() << "Building " << filesystem::make_relative(output_path(ctx, path)).string() << " from " << path.string() << ".";
+    auto out = filesystem::make_relative(output_path(ctx, path));
+
+    logger::dlog() << "Building " << out.string() << " from " << path.string() << ".";
+
+    boost::filesystem::create_directories(out.parent_path());
+    std::vector<std::string> args = { "/bin/sh", "-c", "g++ -c -std=c++1z -o '" + out.string() + "' '" + path.string() + "' -I./include/reaver" };
+
+    using namespace boost::process::initializers;
+    boost::process::pipe p = boost::process::create_pipe();
+
+    {
+        boost::iostreams::file_descriptor_sink sink{ p.sink, boost::iostreams::close_handle };
+        auto child = boost::process::execute(set_args(args), inherit_env(), bind_stdout(sink), close_stdin());
+    }
+
+    boost::iostreams::file_descriptor_source source{ p.source, boost::iostreams::close_handle };
+    boost::iostreams::stream<boost::iostreams::file_descriptor_source> is(source);
+
+    std::string buffer(std::istreambuf_iterator<char>(is.rdbuf()), std::istreambuf_iterator<char>());
+    if (!buffer.empty())
+    {
+        logger::dlog() << buffer;
+    }
 }
 

@@ -24,6 +24,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <mutex>
 
 #include <boost/filesystem.hpp>
 
@@ -45,7 +46,10 @@ namespace reaver
             }
 
             const boost::filesystem::path output_directory;
+
+            std::mutex futures_lock;
             std::unordered_map<std::shared_ptr<target>, optional<future<>>> build_futures;
+
             std::unordered_map<boost::filesystem::path, std::shared_ptr<target>, boost::hash<boost::filesystem::path>> generated_files;
             std::unordered_map<boost::filesystem::path, std::shared_ptr<target>, boost::hash<boost::filesystem::path>> file_targets;
 

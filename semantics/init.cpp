@@ -29,6 +29,7 @@
 #include "despayre/semantics/basic.h"
 #include "despayre/runtime/files.h"
 #include "despayre/runtime/executable.h"
+#include "despayre/runtime/shared_library.h"
 
 void reaver::despayre::_v1::register_builtins(reaver::despayre::_v1::semantic_context & ctx)
 {
@@ -70,6 +71,15 @@ void reaver::despayre::_v1::register_builtins(reaver::despayre::_v1::semantic_co
         U"executable",
         "<builtin>",
         make_type_checking_constructor<executable>({
+            { get_type_identifier<files>(), {} },
+            { get_type_identifier<string>(), 1 }
+        })
+    );
+    create_type<shared_library>(
+        ctx,
+        U"shared_library",
+        "<builtin>",
+        make_type_checking_constructor<shared_library>({
             { get_type_identifier<files>(), {} },
             { get_type_identifier<string>(), 1 }
         })

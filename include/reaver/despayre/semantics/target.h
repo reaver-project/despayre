@@ -42,17 +42,21 @@ namespace reaver
 
             future<> build(context_ptr ctx)
             {
-                auto this_target = _shared_this()->as_target();
-                if (this_target->built(ctx))
+                if (built(ctx))
                 {
                     return make_ready_future();
                 }
 
+                auto this_target = _shared_this()->as_target();
+
+                ctx->futures_lock.lock();
                 auto & build_future = ctx->build_futures[this_target];
+                ctx->futures_lock.unlock();
+
                 if (!build_future)
                 {
                     build_future = when_all(fmap(dependencies(ctx), [ctx](auto && dep){ return dep->build(ctx); }))
-                        .then([&, ctx](){ _build(ctx); });
+                        .then([this_target, ctx](){ this_target->_build(ctx); });
                 }
 
                 return *build_future;
