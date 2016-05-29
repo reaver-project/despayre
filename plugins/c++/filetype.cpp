@@ -57,7 +57,7 @@ void reaver::despayre::cxx::_v1::cxx_compiler::build(context_ptr ctx, const boos
     logger::dlog() << "Building " << out.string() << " from " << path.string() << ".";
 
     boost::filesystem::create_directories(out.parent_path());
-    std::vector<std::string> args = { "/bin/sh", "-c", "g++ -c -std=c++1z -o '" + out.string() + "' '" + path.string() + "' -I./include/reaver" };
+    std::vector<std::string> args = { "/bin/sh", "-c", "exec g++ -c -std=c++1z -o '" + out.string() + "' '" + path.string() + "' -I./include/reaver" };
 
     using namespace boost::process::initializers;
     boost::process::pipe p = boost::process::create_pipe();
