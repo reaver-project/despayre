@@ -173,6 +173,11 @@ namespace reaver
         template<typename T>
         std::shared_ptr<variable> default_constructor(std::vector<std::shared_ptr<variable>> variables)
         {
+            if (std::count_if(variables.begin(), variables.end(), [](auto && variable) { return variable->type() == nullptr; }))
+            {
+                return std::make_shared<delayed_variable>(get_type_identifier<T>(), std::move(variables));
+            }
+
             return std::make_shared<T>(std::move(variables));
         }
 
@@ -189,6 +194,15 @@ namespace reaver
                 {
                     auto actual = std::count_if(variables.begin(), variables.end(), [&](auto && variable) { return variable->type() == type_specifier.first; });
                     if (type_specifier.second && type_specifier.second != actual)
+                    {
+                        assert(0);
+                    }
+                }
+
+                for (auto && argument : variables)
+                {
+                    auto it = type_specifiers.find(argument->type());
+                    if (it == type_specifiers.end() || it->second == 0)
                     {
                         assert(0);
                     }

@@ -49,7 +49,7 @@ void reaver::despayre::_v1::register_builtins(reaver::despayre::_v1::semantic_co
         ctx,
         U"aggregate",
         "<builtin>",
-        make_type_checking_constructor<aggregate>({})
+        &default_constructor<aggregate>
     );
 
     create_type<import_tag>(ctx, U"import", "<builtin>", generate_import(ctx));
