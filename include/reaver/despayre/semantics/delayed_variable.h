@@ -77,6 +77,10 @@ namespace reaver
             {
                 if (_state.index() == 0)
                 {
+                    if (auto nested = std::dynamic_pointer_cast<delayed_variable>(get<0>(_state)))
+                    {
+                        return nested->_shared_this();
+                    }
                     return get<0>(_state);
                 }
 
@@ -87,6 +91,10 @@ namespace reaver
             {
                 if (_state.index() == 0)
                 {
+                    if (auto nested = std::dynamic_pointer_cast<delayed_variable>(get<0>(_state)))
+                    {
+                        return nested->_shared_this();
+                    }
                     return get<0>(_state);
                 }
 
