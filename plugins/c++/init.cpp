@@ -23,7 +23,7 @@
 #include "despayre/semantics/context.h"
 #include "despayre/runtime/context.h"
 
-#include "filetype.h"
+#include "compiler.h"
 #include "linker.h"
 
 namespace reaver

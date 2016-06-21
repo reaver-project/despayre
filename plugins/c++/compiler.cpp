@@ -29,7 +29,7 @@
 #include <sys/wait.h> // eww, but boost.process 0.5 still doesn't abstract WEXITSTATUS away
 #include <boost/iostreams/stream.hpp>
 
-#include "filetype.h"
+#include "compiler.h"
 
 using reaver::despayre::_v1::context_ptr;
 
