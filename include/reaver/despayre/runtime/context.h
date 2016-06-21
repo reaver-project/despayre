@@ -31,7 +31,8 @@
 #include <reaver/optional.h>
 #include <reaver/future.h>
 
-#include "compiler.h" // declares context_ptr
+#include "compiler.h"
+#include "linker.h"
 
 namespace reaver
 {
@@ -54,6 +55,7 @@ namespace reaver
             std::unordered_map<boost::filesystem::path, std::shared_ptr<target>, boost::hash<boost::filesystem::path>> file_targets;
 
             compiler_configuration compilers;
+            linker_configuration linkers;
         };
 
         inline context_ptr make_runtime_context(boost::filesystem::path output_dir)

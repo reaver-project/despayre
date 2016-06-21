@@ -38,7 +38,55 @@ namespace reaver
             {
             }
 
-            virtual bool built(context_ptr) = 0;
+            virtual bool built(context_ptr ctx)
+            {
+                for (auto && dep : dependencies(ctx))
+                {
+                    if (!dep->built(ctx))
+                    {
+                        return false;
+                    }
+                }
+
+                auto outs = outputs(ctx);
+
+                for (auto && output : outs)
+                {
+                    if (!boost::filesystem::exists(output))
+                    {
+                        return false;
+                    }
+                }
+
+                auto ins = inputs(ctx);
+
+                if (ins.empty() || outs.empty())
+                {
+                    if (outs.empty())
+                    {
+                        assert(ins.empty());
+                    }
+
+                    for (auto && out : outs)
+                    {
+                        if (!boost::filesystem::exists(out))
+                        {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }
+
+                auto input_times = fmap(ins, [](auto && path) {
+                    return boost::filesystem::last_write_time(path);
+                });
+                auto output_times = fmap(outs, [](auto && path) {
+                    return boost::filesystem::last_write_time(path);
+                });
+
+                return *std::max_element(input_times.begin(), input_times.end()) < *std::min_element(output_times.begin(), output_times.end());
+            }
 
             future<> build(context_ptr ctx)
             {
@@ -68,8 +116,24 @@ namespace reaver
                 return empty;
             }
 
+            virtual const std::vector<linker_capability> & linker_caps(context_ptr)
+            {
+                static std::vector<linker_capability> empty;
+                return empty;
+            }
+
             virtual void invalidate()
             {
+            }
+
+            virtual std::vector<boost::filesystem::path> inputs(context_ptr)
+            {
+                return {};
+            }
+
+            virtual std::vector<boost::filesystem::path> outputs(context_ptr)
+            {
+                return {};
             }
 
         protected:

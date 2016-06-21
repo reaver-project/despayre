@@ -27,15 +27,13 @@
 
 #include <boost/filesystem.hpp>
 
+#include "decl.h"
+#include "linker.h"
+
 namespace reaver
 {
     namespace despayre { inline namespace _v1
     {
-        // this file is included from runtime/context.h
-        // don't be silly and don't introduce cyclic dependencies
-        struct runtime_context;
-        using context_ptr = std::shared_ptr<runtime_context>;
-
         class compiler
         {
         public:
@@ -45,6 +43,7 @@ namespace reaver
             virtual std::vector<boost::filesystem::path> outputs(context_ptr, const boost::filesystem::path &) const = 0;
 
             virtual void build(context_ptr, const boost::filesystem::path &) const = 0;
+            virtual const std::vector<linker_capability> & linker_caps(context_ptr, const boost::filesystem::path &) const = 0;
         };
 
         using compiler_ptr = std::shared_ptr<compiler>;

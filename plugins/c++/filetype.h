@@ -33,10 +33,21 @@ namespace reaver
             class cxx_compiler : public compiler
             {
             public:
+                cxx_compiler(linker_capability cap) : _linker_cap{ std::move(cap) }
+                {
+                }
+
                 virtual std::vector<boost::filesystem::path> inputs(context_ptr, const boost::filesystem::path &) const override;
                 virtual std::vector<boost::filesystem::path> outputs(context_ptr, const boost::filesystem::path &) const override;
 
                 virtual void build(context_ptr, const boost::filesystem::path &) const override;
+                virtual const std::vector<linker_capability> & linker_caps(context_ptr, const::boost::filesystem::path &) const override
+                {
+                    return _linker_cap;
+                }
+
+            private:
+                std::vector<linker_capability> _linker_cap;
             };
         }}
     }

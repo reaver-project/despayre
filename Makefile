@@ -34,7 +34,7 @@ $(LIBRARY): $(OBJECTS)
 test: ./tests/test
 
 ./tests/test: $(TESTOBJ) $(LIBRARY)
-	$(LD) $(CXXFLAGS) $(LDFLAGS) $(TESTOBJ) -o $@ $(LIBRARIES) -lboost_system -lboost_iostreams -lboost_program_options -lboost_filesystem -ldl -pthread -L. -ldespayre
+	$(LD) $(CXXFLAGS) $(LDFLAGS) $(TESTOBJ) -o $@ $(LIBRARIES) -lboost_system -lboost_iostreams -lboost_program_options -ldl -pthread -L. -ldespayre
 
 install: $(LIBRARY) $(EXECUTABLE)
 	@cp $(EXECUTABLE) $(DESTDIR)$(BINDIR)/$(EXECUTABLE)

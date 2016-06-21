@@ -23,11 +23,13 @@
 #pragma once
 
 #include <reaver/prelude/functor.h>
+#include <reaver/prelude/monad.h>
 #include <reaver/filesystem.h>
 
 #include "../semantics/string.h"
 #include "../semantics/target.h"
 #include "compiler.h"
+#include "linker.h"
 
 namespace reaver
 {
@@ -56,48 +58,20 @@ namespace reaver
         public:
             file(boost::filesystem::path path) : target{ get_type_identifier<file>() }
             {
-                [&]{
-                    if (path.is_absolute())
-                    {
-                        _path = std::move(path);
-                        return;
-                    }
-
-                    auto relative = filesystem::make_relative(path);
-                    if (relative.begin()->string() == "..")
-                    {
-                        _path = boost::filesystem::absolute(std::move(path));
-                        return;
-                    }
-
-                    _path = std::move(relative);
-                }();
-            }
-
-            virtual bool built(context_ptr ctx) override
-            {
-                auto outs = outputs(ctx);
-                assert(outs.size());
-
-                for (auto && output : outs)
+                if (path.is_absolute())
                 {
-                    if (!boost::filesystem::exists(output))
-                    {
-                        return false;
-                    }
+                    _path = std::move(path);
+                    return;
                 }
 
-                auto ins = inputs(ctx);
-                assert(ins.size());
+                auto relative = filesystem::make_relative(path);
+                if (relative.begin()->string() == "..")
+                {
+                    _path = boost::filesystem::absolute(std::move(path));
+                    return;
+                }
 
-                auto input_times = fmap(ins, [](auto && path) {
-                    return boost::filesystem::last_write_time(path);
-                });
-                auto output_times = fmap(outs, [](auto && path) {
-                    return boost::filesystem::last_write_time(path);
-                });
-
-                return *std::max_element(input_times.begin(), input_times.end()) < *std::min_element(output_times.begin(), output_times.end());
+                _path = std::move(relative);
             }
 
             const boost::filesystem::path & value() const
@@ -105,12 +79,12 @@ namespace reaver
                 return _path;
             }
 
-            std::vector<boost::filesystem::path> inputs(context_ptr ctx) const
+            virtual std::vector<boost::filesystem::path> inputs(context_ptr ctx) override
             {
                 return ctx->compilers.get_compiler(_path)->inputs(ctx, _path);
             }
 
-            std::vector<boost::filesystem::path> outputs(context_ptr ctx) const
+            virtual std::vector<boost::filesystem::path> outputs(context_ptr ctx) override
             {
                 return ctx->compilers.get_compiler(_path)->outputs(ctx, _path);
             }
@@ -134,6 +108,11 @@ namespace reaver
                     _cached_context = ctx;
                 }
                 return *_deps;
+            }
+
+            virtual const std::vector<linker_capability> & linker_caps(context_ptr ctx) override
+            {
+                return ctx->compilers.get_compiler(_path)->linker_caps(ctx, _path);
             }
 
             virtual void invalidate() override
@@ -213,9 +192,19 @@ namespace reaver
                     _file_deps = fmap(_args, [&](boost::filesystem::path argument) {
                         return get_file_target(ctx, std::move(argument));
                     });
+                    _linker_caps = mbind(*_file_deps, [&](auto && file) {
+                        return file->linker_caps(ctx);
+                    });
+                    std::unique(_linker_caps->begin(), _linker_caps->end());
                     _cached_context = ctx;
                 }
                 return *_file_deps;
+            }
+
+            virtual const std::vector<linker_capability> & linker_caps(context_ptr ctx) override
+            {
+                assert(_linker_caps && ctx == _cached_context);
+                return *_linker_caps;
             }
 
             virtual void invalidate() override
@@ -223,16 +212,11 @@ namespace reaver
                 _cached_context = nullptr;
             }
 
-            virtual bool built(context_ptr ctx) override
+            virtual std::vector<boost::filesystem::path> outputs(context_ptr ctx) override
             {
-                for (auto && dep : dependencies(ctx))
-                {
-                    if (!dep->built(ctx))
-                    {
-                        return false;
-                    }
-                }
-                return true;
+                return mbind(dependencies(ctx), [&](auto && dep) {
+                    return dep->outputs(ctx);
+                });
             }
 
         protected:
@@ -243,6 +227,7 @@ namespace reaver
         private:
             std::vector<boost::filesystem::path> _args;
             optional<std::vector<std::shared_ptr<target>>> _file_deps;
+            optional<std::vector<linker_capability>> _linker_caps;
             context_ptr _cached_context;
         };
 

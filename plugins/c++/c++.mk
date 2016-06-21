@@ -14,3 +14,5 @@ clean-$(PLUGIN):
 
 clean: clean-$(PLUGIN)
 
+-include $(PLUGINSRC:.cpp=.d)
+

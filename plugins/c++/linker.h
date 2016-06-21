@@ -20,11 +20,9 @@
  *
  **/
 
-#include "despayre/semantics/context.h"
-#include "despayre/runtime/context.h"
+#pragma once
 
-#include "filetype.h"
-#include "linker.h"
+#include "despayre/runtime/linker.h"
 
 namespace reaver
 {
@@ -32,25 +30,11 @@ namespace reaver
     {
         namespace cxx { inline namespace _v1
         {
-            extern "C" void init_semantic(reaver::despayre::_v1::semantic_context & ctx)
+            class cxx_linker : public linker
             {
-            }
-
-            extern "C" void init_runtime(reaver::despayre::_v1::context_ptr ctx)
-            {
-                auto linker = std::make_shared<linker_description>();
-                linker->name = "c++";
-                linker->convenient_linker = std::make_shared<cxx_linker>();
-                linker->compatible_with = {};
-                linker->inconvenient_linker_flags = { "-lstdc++" };
-
-                ctx->linkers.register_linker(linker);
-
-                auto comp = std::make_shared<cxx_compiler>(std::move(linker));
-                ctx->compilers.register_compiler(".cpp", comp);
-                ctx->compilers.register_compiler(".cxx", comp);
-                ctx->compilers.register_compiler(".c++", comp);
-            }
+            protected:
+                virtual void _build(context_ptr, const boost::filesystem::path &, binary_type, const std::vector<boost::filesystem::path> &, const std::string &) const override;
+            };
         }}
     }
 }

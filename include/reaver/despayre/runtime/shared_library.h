@@ -25,6 +25,8 @@
 #include "../semantics/target.h"
 #include "../semantics/string.h"
 #include "files.h"
+#include "linker.h"
+#include "flags.h"
 
 namespace reaver
 {
@@ -46,6 +48,11 @@ namespace reaver
                         id<files>(), [&](std::shared_ptr<files> arg) {
                             _deps.push_back(std::move(arg));
                             return unit{};
+                        },
+
+                        id<shared_library>(), [&](std::shared_ptr<shared_library> arg) {
+                            _deps.push_back(std::move(arg));
+                            return unit{};
                         }
                     );
                 }
@@ -56,15 +63,24 @@ namespace reaver
                 return _deps;
             }
 
-            virtual bool built(context_ptr) override
+            virtual std::vector<boost::filesystem::path> inputs(context_ptr ctx) override
             {
-                return false;
+                return mbind(_deps, [&](auto && dep) { return dep->outputs(ctx); });
+            }
+
+            virtual std::vector<boost::filesystem::path> outputs(context_ptr ctx) override
+            {
+                return { ctx->output_directory / ("lib" + utf8(_name) + ".so") };
             }
 
         protected:
             virtual void _build(context_ptr ctx) override
             {
-                logger::dlog() << "Building shared library " << filesystem::make_relative(ctx->output_directory / ("lib" + utf8(_name) + ".so")).string() << ".";
+                auto required_linker_caps = mbind(_deps, [&](auto && dep) { return dep->linker_caps(ctx); });
+                std::sort(required_linker_caps.begin(), required_linker_caps.end());
+                required_linker_caps.erase(std::unique(required_linker_caps.begin(), required_linker_caps.end()), required_linker_caps.end());
+                auto linker = ctx->linkers.get_linker(required_linker_caps);
+                linker->build(ctx, outputs(ctx).front(), binary_type::shared_library, inputs(ctx), required_linker_caps);
             }
 
         private:

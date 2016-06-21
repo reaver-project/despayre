@@ -20,6 +20,7 @@
  *
  **/
 
+#include <reaver/logger.h>
 #include <reaver/filesystem.h>
 
 #include <boost/process.hpp>
@@ -29,39 +30,38 @@
 #include <sys/wait.h> // eww, but boost.process 0.5 still doesn't abstract WEXITSTATUS away
 #include <boost/iostreams/stream.hpp>
 
-#include "filetype.h"
+#include "linker.h"
 
-using reaver::despayre::_v1::context_ptr;
-
-namespace
+void reaver::despayre::cxx::_v1::cxx_linker::_build(reaver::despayre::_v1::context_ptr ctx, const boost::filesystem::path & out, reaver::despayre::_v1::binary_type type, const std::vector<boost::filesystem::path> & inputs, const std::string & additional_flags) const
 {
-    boost::filesystem::path output_path(context_ptr ctx, boost::filesystem::path path)
+    std::string message;
+    std::string flags;
+
+    switch (type)
     {
-        path += ".o";
-        return ctx->output_directory / path;
+        case binary_type::executable:
+            message = "Building executable ";
+            break;
+
+        case binary_type::shared_library:
+            message = "Building shared library ";
+            flags = " -shared ";
+            break;
+
+        case binary_type::static_library:
+            assert(!"static library not implemented yet");
     }
-}
 
-std::vector<boost::filesystem::path> reaver::despayre::cxx::_v1::cxx_compiler::inputs(context_ptr, const boost::filesystem::path & path) const
-{
-    // needs stuff
-    return { path };
-}
+    logger::dlog() << message << out.string() << ".";
 
-std::vector<boost::filesystem::path> reaver::despayre::cxx::_v1::cxx_compiler::outputs(context_ptr ctx, const boost::filesystem::path & path) const
-{
-    // probably needs stuff; maybe not in this case
-    return { output_path(ctx, path) };
-}
-
-void reaver::despayre::cxx::_v1::cxx_compiler::build(context_ptr ctx, const boost::filesystem::path & path) const
-{
-    auto out = filesystem::make_relative(output_path(ctx, path));
-
-    logger::dlog() << "Building " << out.string() << " from " << path.string() << ".";
+    std::string input_paths = " ";
+    for (auto && input : inputs)
+    {
+        input_paths += "\"" + input.string() + "\" ";
+    }
 
     boost::filesystem::create_directories(out.parent_path());
-    std::vector<std::string> args = { "/bin/sh", "-c", "exec clang++ -c ${CXXFLAGS} -std=c++1z -o '" + out.string() + "' '" + path.string() + "' -I./include/reaver -fPIC" };
+    std::vector<std::string> args = { "/bin/sh", "-c", "exec clang++ ${CXXFLAGS} -std=c++1z -o '" + out.string() + "' " + additional_flags + flags + input_paths };
 
     using namespace boost::process::initializers;
     boost::process::pipe p = boost::process::create_pipe();

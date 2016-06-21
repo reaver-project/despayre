@@ -25,6 +25,10 @@
 #include "../semantics/target.h"
 #include "../semantics/string.h"
 #include "files.h"
+#include "linker.h"
+#include "shared_library.h"
+
+#include "../semantics/delayed_variable.h"
 
 namespace reaver
 {
@@ -46,6 +50,11 @@ namespace reaver
                         id<files>(), [&](std::shared_ptr<files> arg) {
                             _deps.push_back(std::move(arg));
                             return unit{};
+                        },
+
+                        id<shared_library>(), [&](std::shared_ptr<shared_library> arg) {
+                            _deps.push_back(std::move(arg));
+                            return unit{};
                         }
                     );
                 }
@@ -56,15 +65,24 @@ namespace reaver
                 return _deps;
             }
 
-            virtual bool built(context_ptr) override
+            virtual std::vector<boost::filesystem::path> inputs(context_ptr ctx) override
             {
-                return false;
+                return mbind(_deps, [&](auto && dep) { return dep->outputs(ctx); });
+            }
+
+            virtual std::vector<boost::filesystem::path> outputs(context_ptr ctx) override
+            {
+                return { ctx->output_directory / utf8(_name) };
             }
 
         protected:
             virtual void _build(context_ptr ctx) override
             {
-                logger::dlog() << "Building executable " << filesystem::make_relative(ctx->output_directory / utf8(_name)).string() << ".";
+                auto required_linker_caps = mbind(_deps, [&](auto && dep) { return dep->linker_caps(ctx); });
+                std::sort(required_linker_caps.begin(), required_linker_caps.end());
+                required_linker_caps.erase(std::unique(required_linker_caps.begin(), required_linker_caps.end()), required_linker_caps.end());
+                auto linker = ctx->linkers.get_linker(required_linker_caps);
+                linker->build(ctx, outputs(ctx).front(), binary_type::executable, inputs(ctx), required_linker_caps);
             }
 
         private:

@@ -72,6 +72,7 @@ void reaver::despayre::_v1::register_builtins(reaver::despayre::_v1::semantic_co
         "<builtin>",
         make_type_checking_constructor<executable>({
             { get_type_identifier<files>(), {} },
+            { get_type_identifier<shared_library>(), {} },
             { get_type_identifier<string>(), 1 }
         })
     );
@@ -81,6 +82,7 @@ void reaver::despayre::_v1::register_builtins(reaver::despayre::_v1::semantic_co
         "<builtin>",
         make_type_checking_constructor<shared_library>({
             { get_type_identifier<files>(), {} },
+            { get_type_identifier<shared_library>(), {} },
             { get_type_identifier<string>(), 1 }
         })
     );
