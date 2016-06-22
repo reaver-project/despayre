@@ -53,7 +53,7 @@ namespace reaver
 
             // TODO: this also should return a future
             // not block like a dumb temporary implementation that it is
-            void build(std::string target_name)
+            void build(std::string target_name, std::string output_dir)
             {
                 std::u32string converted = boost::locale::conv::utf_to_utf<char32_t>(target_name);
 
@@ -86,10 +86,10 @@ namespace reaver
                     throw exception{ logger::fatal } << "could not find the requested target `" << target_name << "`.";
                 }
 
-                auto ctx = make_runtime_context(boost::filesystem::current_path() / "output");
+                auto ctx = make_runtime_context(boost::filesystem::current_path() / output_dir);
                 for (const auto & init : _semantic_context.plugin_initializers)
                 {
-                    init(ctx);
+                    init.initializer(ctx, init.context);
                 }
 
                 // count all the target to be built

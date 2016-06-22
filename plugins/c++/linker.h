@@ -23,6 +23,7 @@
 #pragma once
 
 #include "despayre/runtime/linker.h"
+#include "despayre/semantics/variable.h"
 
 namespace reaver
 {
@@ -32,8 +33,16 @@ namespace reaver
         {
             class cxx_linker : public linker
             {
+            public:
+                cxx_linker(std::shared_ptr<variable> arguments) : _arguments{ std::move(arguments) }
+                {
+                }
+
             protected:
                 virtual void _build(context_ptr, const boost::filesystem::path &, binary_type, const std::vector<boost::filesystem::path> &, const std::string &) const override;
+
+            private:
+                std::shared_ptr<variable> _arguments;
             };
         }}
     }

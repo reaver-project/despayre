@@ -5,3 +5,6 @@
 /despayre
 .*
 tests/test
+output/*
+stage-2/*
+stage-3/*

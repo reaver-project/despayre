@@ -32,21 +32,21 @@ namespace reaver
     {
         namespace cxx { inline namespace _v1
         {
-            extern "C" void init_semantic(reaver::despayre::_v1::semantic_context & ctx)
+            extern "C" void init_semantic(reaver::despayre::_v1::semantic_context &)
             {
             }
 
-            extern "C" void init_runtime(reaver::despayre::_v1::context_ptr ctx)
+            extern "C" void init_runtime(reaver::despayre::_v1::context_ptr ctx, std::shared_ptr<variable> arguments)
             {
                 auto linker = std::make_shared<linker_description>();
                 linker->name = "c++";
-                linker->convenient_linker = std::make_shared<cxx_linker>();
+                linker->convenient_linker = std::make_shared<cxx_linker>(arguments);
                 linker->compatible_with = {};
                 linker->inconvenient_linker_flags = { "-lstdc++" };
 
                 ctx->linkers.register_linker(linker);
 
-                auto comp = std::make_shared<cxx_compiler>(std::move(linker));
+                auto comp = std::make_shared<cxx_compiler>(std::move(linker), arguments);
                 ctx->compilers.register_compiler(".cpp", comp);
                 ctx->compilers.register_compiler(".cxx", comp);
                 ctx->compilers.register_compiler(".c++", comp);

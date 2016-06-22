@@ -43,6 +43,35 @@ namespace reaver
         using type_identifier = type *;
         struct type_descriptor;
 
+        struct plugin_initializer_with_context
+        {
+            plugin_function<void (context_ptr, std::shared_ptr<variable>)> initializer;
+            std::shared_ptr<variable> context;
+
+            bool operator==(const plugin_initializer_with_context & other) const
+            {
+                return initializer == other.initializer && context == other.context;
+            }
+        };
+
+        struct hiwc_hash
+        {
+            std::size_t operator()(const reaver::despayre::_v1::plugin_initializer_with_context & piwc) const
+            {
+                std::size_t ret = 0;
+
+                auto hash_combine = [&](auto && t) {
+                    std::hash<std::remove_cv_t<std::remove_reference_t<decltype(t)>>> hasher;
+                    ret ^= hasher(t) + 0x9e3779b9 + (ret << 6) + (ret >> 2);
+                };
+
+                hash_combine(piwc.initializer);
+                hash_combine(piwc.context);
+
+                return ret;
+            }
+        };
+
         struct semantic_context
         {
             semantic_context() = default;
@@ -56,7 +85,7 @@ namespace reaver
             std::unordered_map<std::shared_ptr<delayed_variable>, range_type> unresolved;
             // ugly map because ugly incomplete type makes GCC unhappy when this is unordered
             std::map<type_identifier, type_descriptor> type_descriptors;
-            std::unordered_set<plugin_function<void (context_ptr)>> plugin_initializers;
+            std::unordered_set<plugin_initializer_with_context, hiwc_hash> plugin_initializers;
         };
     }}
 }

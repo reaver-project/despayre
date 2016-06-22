@@ -30,6 +30,7 @@
 #include <boost/iostreams/stream.hpp>
 
 #include "compiler.h"
+#include "despayre/semantics/string.h"
 
 using reaver::despayre::_v1::context_ptr;
 
@@ -61,7 +62,20 @@ void reaver::despayre::cxx::_v1::cxx_compiler::build(context_ptr ctx, const boos
     logger::dlog() << "Building " << out.string() << " from " << path.string() << ".";
 
     boost::filesystem::create_directories(out.parent_path());
-    std::vector<std::string> args = { "/bin/sh", "-c", "exec clang++ -c ${CXXFLAGS} -std=c++1z -o '" + out.string() + "' '" + path.string() + "' -I./include/reaver -fPIC" };
+
+    // need a better way to do this
+    auto flags = [&]{
+        try
+        {
+            return _arguments->get_property(U"flags")->as<string>()->value();
+        }
+        catch (...)
+        {
+            return std::u32string{};
+        }
+    }();
+
+    std::vector<std::string> args = { "/bin/sh", "-c", "exec clang++ -c ${CXXFLAGS} -std=c++1z -o '" + out.string() + "' '" + path.string() + "' " + utf8(flags) };
 
     using namespace boost::process::initializers;
     boost::process::pipe p = boost::process::create_pipe();

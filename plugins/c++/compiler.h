@@ -23,6 +23,7 @@
 #pragma once
 
 #include "despayre/runtime/context.h"
+#include "despayre/semantics/variable.h"
 
 namespace reaver
 {
@@ -33,7 +34,7 @@ namespace reaver
             class cxx_compiler : public compiler
             {
             public:
-                cxx_compiler(linker_capability cap) : _linker_cap{ std::move(cap) }
+                cxx_compiler(linker_capability cap, std::shared_ptr<variable> arguments) : _linker_cap{ std::move(cap) }, _arguments{ std::move(arguments) }
                 {
                 }
 
@@ -48,6 +49,7 @@ namespace reaver
 
             private:
                 std::vector<linker_capability> _linker_cap;
+                std::shared_ptr<variable> _arguments;
             };
         }}
     }

@@ -31,6 +31,7 @@
 #include <boost/iostreams/stream.hpp>
 
 #include "linker.h"
+#include "despayre/semantics/string.h"
 
 void reaver::despayre::cxx::_v1::cxx_linker::_build(reaver::despayre::_v1::context_ptr ctx, const boost::filesystem::path & out, reaver::despayre::_v1::binary_type type, const std::vector<boost::filesystem::path> & inputs, const std::string & additional_flags) const
 {
@@ -60,8 +61,20 @@ void reaver::despayre::cxx::_v1::cxx_linker::_build(reaver::despayre::_v1::conte
         input_paths += "\"" + input.string() + "\" ";
     }
 
+    // need a better way to do this
+    auto ldflags = [&]{
+        try
+        {
+            return _arguments->get_property(U"ldflags")->as<string>()->value();
+        }
+        catch (...)
+        {
+            return std::u32string{};
+        }
+    }();
+
     boost::filesystem::create_directories(out.parent_path());
-    std::vector<std::string> args = { "/bin/sh", "-c", "exec clang++ ${CXXFLAGS} ${LDFLAGS} -std=c++1z -o '" + out.string() + "' " + additional_flags + flags + input_paths };
+    std::vector<std::string> args = { "/bin/sh", "-c", "exec clang++ ${CXXFLAGS} ${LDFLAGS} -std=c++1z -o '" + out.string() + "' " + input_paths + additional_flags + flags + " " + utf8(ldflags) };
 
     using namespace boost::process::initializers;
     boost::process::pipe p = boost::process::create_pipe();

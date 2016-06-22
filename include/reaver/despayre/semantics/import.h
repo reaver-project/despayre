@@ -50,11 +50,10 @@ namespace reaver
             {
                 assert(args.size() == 2);
                 assert(args[0]->type() == get_type_identifier<string>());
-                assert(args[1]->type() == get_type_identifier<name_space>());
 
                 auto plugin = open_library("despayre." + utf8(args[0]->as<string>()->value()));
                 plugin->get_symbol<void (semantic_context &)>("init_semantic")(ctx);
-                ctx.plugin_initializers.emplace(plugin, "init_runtime");
+                ctx.plugin_initializers.insert({ { plugin, "init_runtime" }, args[1] });
 
                 return std::make_shared<plugin_namespace>(std::move(plugin));
             };

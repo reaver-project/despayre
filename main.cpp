@@ -29,7 +29,7 @@
 int main(int argc, char ** argv) try
 {
     auto context = reaver::despayre::despayre{ "./buildfile" };
-    context.build(argv[1]);
+    context.build(argv[1], argv[2]);
 }
 catch (reaver::exception & ex)
 {
