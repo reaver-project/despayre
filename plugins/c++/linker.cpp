@@ -38,6 +38,8 @@ void reaver::despayre::cxx::_v1::cxx_linker::_build(reaver::despayre::_v1::conte
     std::string message;
     std::string flags;
 
+    auto output = filesystem::make_relative(out);
+
     switch (type)
     {
         case binary_type::executable:
@@ -53,7 +55,7 @@ void reaver::despayre::cxx::_v1::cxx_linker::_build(reaver::despayre::_v1::conte
             assert(!"static library not implemented yet");
     }
 
-    logger::dlog() << message << out.string() << ".";
+    logger::dlog() << message << output.string() << ".";
 
     std::string input_paths = " ";
     for (auto && input : inputs)
@@ -73,8 +75,8 @@ void reaver::despayre::cxx::_v1::cxx_linker::_build(reaver::despayre::_v1::conte
         }
     }();
 
-    boost::filesystem::create_directories(out.parent_path());
-    std::vector<std::string> args = { "/bin/sh", "-c", "exec clang++ ${CXXFLAGS} ${LDFLAGS} -std=c++1z -o '" + out.string() + "' " + input_paths + additional_flags + flags + " " + utf8(ldflags) };
+    boost::filesystem::create_directories(output.parent_path());
+    std::vector<std::string> args = { "/bin/sh", "-c", "exec clang++ ${CXXFLAGS} ${LDFLAGS} -std=c++1z -o '" + output.string() + "' " + input_paths + additional_flags + flags + " " + utf8(ldflags) };
 
     using namespace boost::process::initializers;
     boost::process::pipe p = boost::process::create_pipe();
