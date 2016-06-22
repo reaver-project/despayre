@@ -5,8 +5,8 @@ cxx.flags = "-Wall -I./include/reaver" // and a temporary workaround for reverse
 cxx.gcc.flags = ""
 cxx.clang.flags = "-Wextra -Wpedantic -Weffc++ -Werror"
 
-cxx.ldflags = "-pthreads" // and this is a temporary workaround
-    + " -lboost_filesystem -lboost_system -lboost_iostreams"
+cxx.ldflags = "-pthread" // and this is a temporary workaround
+    + " -lboost_filesystem -lboost_system -lboost_iostreams -ldl"
 cxx.gcc.ldflags = ""
 cxx.clang.ldflags = ""
 

@@ -75,7 +75,7 @@ void reaver::despayre::cxx::_v1::cxx_compiler::build(context_ptr ctx, const boos
         }
     }();
 
-    std::vector<std::string> args = { "/bin/sh", "-c", "exec clang++ -c ${CXXFLAGS} -std=c++1z -o '" + out.string() + "' '" + path.string() + "' " + utf8(flags) };
+    std::vector<std::string> args = { "/bin/sh", "-c", "exec ${CXX} -c ${CXXFLAGS} -std=c++1z -o '" + out.string() + "' '" + path.string() + "' " + utf8(flags) };
 
     using namespace boost::process::initializers;
     boost::process::pipe p = boost::process::create_pipe();
