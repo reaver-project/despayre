@@ -23,7 +23,16 @@ LD_LIBRARY_PATH="${PWD}:${LD_LIBRARY_PATH}" ./despayre all stage-2
 LD_LIBRARY_PATH="${PWD}/stage-2:${LD_LIBRARY_PATH}" ./stage-2/despayre all stage-3
 
 # compare stage 2 and 3
-cmp --silent stage-2/despayre stage-3/despayre || { echo '`despayre` binary differs between stages 2 and 3'; exit 1; }
-cmp --silent stage-2/libdespayre.so stage-3/libdespayre.so || { echo '`libdespayre.so` binary differs between stages 2 and 3'; exit 1; }
-cmp --silent stage-2/libdespayre.c++.so stage-3/libdespayre.c++.so || { echo '`libdespayre.c++.so` binary differs between stages 2 and 3'; exit 1; }
+set +x
+
+compare() {
+    diff <(objdump -d stage-2/$1 | sed 's/stage-2//') <(objdump -d stage-3/$1 | sed 's/stage-3//') 2>&1 >/dev/null \
+        || { echo '`'$1'` binary differs between stages 2 and 3'; exit 1; }
+}
+
+compare despayre
+compare libdespayre.so
+compare libdespayre.c++.so
+
+echo 'Bootstrap successful.'
 
