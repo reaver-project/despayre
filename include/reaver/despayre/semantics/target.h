@@ -85,7 +85,7 @@ namespace reaver
                     return boost::filesystem::last_write_time(path);
                 });
 
-                return *std::max_element(input_times.begin(), input_times.end()) < *std::min_element(output_times.begin(), output_times.end());
+                return *std::max_element(input_times.begin(), input_times.end()) <= *std::min_element(output_times.begin(), output_times.end());
             }
 
             future<> build(context_ptr ctx)

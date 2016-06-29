@@ -20,6 +20,8 @@
  *
  **/
 
+#include <fstream>
+
 #include <reaver/filesystem.h>
 
 #include <boost/process.hpp>
@@ -41,11 +43,77 @@ namespace
         path += ".o";
         return ctx->output_directory / path;
     }
+
+    boost::filesystem::path dependencies_path(context_ptr ctx, boost::filesystem::path path)
+    {
+        auto output = output_path(ctx, std::move(path));
+        output += ".deps";
+        return output;
+    }
 }
 
-std::vector<boost::filesystem::path> reaver::despayre::cxx::_v1::cxx_compiler::inputs(context_ptr, const boost::filesystem::path & path) const
+std::vector<boost::filesystem::path> reaver::despayre::cxx::_v1::cxx_compiler::inputs(context_ptr ctx, const boost::filesystem::path & path) const
 {
-    // needs stuff
+    auto deps_path = dependencies_path(ctx, path);
+
+    if (boost::filesystem::exists(deps_path))
+    {
+        std::vector<boost::filesystem::path> inputs;
+
+        std::fstream file{ deps_path.string(), std::ios::in };
+        std::string buffer{ std::istreambuf_iterator<char>{ file.rdbuf() }, {} };
+        auto start = buffer.begin();
+        auto end = buffer.end();
+
+        while (*start++ != ':')
+        {
+        }
+
+        auto current = start;
+        ++current;
+        assert(current != start);
+
+        while (start != end)
+        {
+            while (*start == ' ' || *start == '\\' || *start == '\n')
+            {
+                ++start;
+
+                if (start == end)
+                {
+                    break;
+                }
+            }
+
+            if (start == end)
+            {
+                break;
+            }
+
+            auto current = start;
+            bool escaped = false;
+
+            while (current != end && ((*current != ' ' && *current != '\n') || escaped))
+            {
+                if (!escaped && *current == '\\')
+                {
+                    escaped = true;
+                }
+                else
+                {
+                    escaped = false;
+                }
+
+                ++current;
+            }
+
+            inputs.emplace_back(start, current);
+            start = current;
+        }
+
+        return inputs;
+    }
+
     return { path };
 }
 
@@ -75,7 +143,9 @@ void reaver::despayre::cxx::_v1::cxx_compiler::build(context_ptr ctx, const boos
         }
     }();
 
-    std::vector<std::string> args = { "/bin/sh", "-c", "exec ${CXX} -c ${CXXFLAGS} -std=c++1z -o '" + out.string() + "' '" + path.string() + "' " + utf8(flags) };
+    auto deps_flags = " -MD -MF " + dependencies_path(ctx, path).string() + " ";
+
+    std::vector<std::string> args = { "/bin/sh", "-c", "exec ${CXX} -c ${CXXFLAGS} -std=c++1z -o '" + out.string() + "' '" + path.string() + "' " + utf8(flags) + deps_flags };
 
     using namespace boost::process::initializers;
     boost::process::pipe p = boost::process::create_pipe();
