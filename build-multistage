@@ -9,9 +9,9 @@ then
 fi
 
 # clear previous builds
-make clean
-rm -rf stage-2
-rm -rf stage-3
+# make clean
+# rm -rf stage-2
+# rm -rf stage-3
 
 # build stage 1
 make -j ${processor_count} -l ${processor_count} CC=${CC} CXX=${CXX} LD=${LD}

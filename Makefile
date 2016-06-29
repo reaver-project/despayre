@@ -55,6 +55,7 @@ clean:
 	@rm -f $(LIBRARY)
 	@rm -f $(EXECUTABLE)
 	@rm -f tests/test
+	@rm -rf stage-{2,3}
 
 .PHONY: install clean library test
 
