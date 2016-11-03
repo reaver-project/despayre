@@ -54,6 +54,8 @@ namespace reaver
         class linker
         {
         public:
+            virtual ~linker() = default;
+
             void build(context_ptr ctx, const boost::filesystem::path & output, binary_type type, const std::vector<boost::filesystem::path> & inputs, const std::vector<linker_capability> & required_caps) const
             {
                 std::stringstream all_flags{ " " }; // really need sane ranges though
