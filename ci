@@ -29,5 +29,5 @@ install_package mayfly develop
 make test -j${core_number} -l${core_number}
 ./tests/test -j ${core_number} -l 3 -r teamcity
 
-CC=cc CXX=c++ LD=c++ ./build-multistage || echo "##teamcity[message text='Bootstrap failed.' status='ERROR']"
+CC=cc CXX=c++ LD=c++ ./build-multistage
 

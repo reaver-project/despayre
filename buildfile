@@ -3,7 +3,7 @@ cxx.version = "c++1z"
 cxx.flags = "-Wall -I./include/reaver" // and a temporary workaround for reverse caps
     + " -fPIC"
 cxx.gcc.flags = ""
-cxx.clang.flags = "-Wextra -Wpedantic -Weffc++ -Werror"
+cxx.clang.flags = "-Wextra -Wpedantic -Weffc++ -Werror -Wno-unused-parameter"
 
 cxx.ldflags = "-pthread" // and this is a temporary workaround
     + " -lboost_filesystem -lboost_system -lboost_iostreams -ldl"
