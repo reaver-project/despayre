@@ -1,7 +1,7 @@
 /**
  * Despayre License
  *
- * Copyright © 2016 Michał "Griwes" Dominiak
+ * Copyright © 2016-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -36,10 +36,12 @@ namespace reaver
             public:
                 cxx_compiler(linker_capability cap, std::shared_ptr<variable> arguments) : _linker_cap{ std::move(cap) }, _arguments{ std::move(arguments) }
                 {
+                    _detect_compiler();
                 }
 
                 virtual std::vector<boost::filesystem::path> inputs(context_ptr, const boost::filesystem::path &) const override;
                 virtual std::vector<boost::filesystem::path> outputs(context_ptr, const boost::filesystem::path &) const override;
+                virtual bool needs_rebuild(context_ptr, const boost::filesystem::path &) const override;
 
                 virtual void build(context_ptr, const boost::filesystem::path &) const override;
                 virtual const std::vector<linker_capability> & linker_caps(context_ptr, const::boost::filesystem::path &) const override
@@ -48,8 +50,25 @@ namespace reaver
                 }
 
             private:
+                void _detect_compiler();
+                void _detect_gcc_version(const std::string &);
+                void _detect_clang_version(const std::string &);
+
+                std::vector<std::string> _build_command(context_ptr, const boost::filesystem::path &) const;
+
                 std::vector<linker_capability> _linker_cap;
                 std::shared_ptr<variable> _arguments;
+
+                enum class vendor
+                {
+                    gcc,
+                    clang,
+                    unknown
+                };
+
+                boost::filesystem::path _compiler_path;
+                vendor _vendor = vendor::unknown;
+                std::string _version;
             };
         }}
     }

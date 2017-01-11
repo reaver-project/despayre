@@ -1,7 +1,7 @@
 /**
  * Despayre License
  *
- * Copyright © 2016 Michał "Griwes" Dominiak
+ * Copyright © 2016-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -87,6 +87,11 @@ namespace reaver
             virtual std::vector<boost::filesystem::path> outputs(context_ptr ctx) override
             {
                 return ctx->compilers.get_compiler(_path)->outputs(ctx, _path);
+            }
+
+            virtual bool needs_rebuild(context_ptr ctx) override
+            {
+                return ctx->compilers.get_compiler(_path)->needs_rebuild(ctx, _path);
             }
 
             virtual const std::vector<std::shared_ptr<target>> & dependencies(context_ptr ctx) override

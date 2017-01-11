@@ -1,7 +1,7 @@
 /**
  * Despayre License
  *
- * Copyright © 2016 Michał "Griwes" Dominiak
+ * Copyright © 2016-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -41,6 +41,7 @@ namespace reaver
 
             virtual std::vector<boost::filesystem::path> inputs(context_ptr, const boost::filesystem::path &) const = 0;
             virtual std::vector<boost::filesystem::path> outputs(context_ptr, const boost::filesystem::path &) const = 0;
+            virtual bool needs_rebuild(context_ptr, const boost::filesystem::path &) const = 0;
 
             virtual void build(context_ptr, const boost::filesystem::path &) const = 0;
             virtual const std::vector<linker_capability> & linker_caps(context_ptr, const boost::filesystem::path &) const = 0;
