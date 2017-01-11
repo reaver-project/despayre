@@ -1,7 +1,7 @@
 /**
  * Despayre License
  *
- * Copyright © 2016 Michał "Griwes" Dominiak
+ * Copyright © 2016-2017 Michał "Griwes" Dominiak
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -85,7 +85,7 @@ namespace reaver
                     return boost::filesystem::last_write_time(path);
                 });
 
-                return *std::max_element(input_times.begin(), input_times.end()) <= *std::min_element(output_times.begin(), output_times.end());
+                return *std::max_element(input_times.begin(), input_times.end()) <= *std::min_element(output_times.begin(), output_times.end()) && !needs_rebuild(ctx);
             }
 
             future<> build(context_ptr ctx)
@@ -134,6 +134,11 @@ namespace reaver
             virtual std::vector<boost::filesystem::path> outputs(context_ptr)
             {
                 return {};
+            }
+
+            virtual bool needs_rebuild(context_ptr)
+            {
+                return false;
             }
 
         protected:
