@@ -52,6 +52,10 @@ namespace
         output += ".deps";
         return output;
     }
+
+    const char * compiler_detector =
+#include "compiler_detector.h"
+    ;
 }
 
 void reaver::despayre::cxx::_v1::cxx_compiler::_detect_compiler()
@@ -91,7 +95,7 @@ void reaver::despayre::cxx::_v1::cxx_compiler::_detect_compiler()
 
     logger::dlog() << " -- Found a C++ compiler: " << _compiler_path.string();
 
-    std::vector<std::string> args = { "/bin/sh", "-c", "exec " + _compiler_path.string() + " --version" };
+    std::vector<std::string> args = { "/bin/sh", "-c", "exec " + _compiler_path.string() + " -x c++ -E - <<'EOF'\n" + compiler_detector + "\nEOF" };
 
     using namespace boost::process::initializers;
     boost::process::pipe p = boost::process::create_pipe();
@@ -105,22 +109,14 @@ void reaver::despayre::cxx::_v1::cxx_compiler::_detect_compiler()
         exit_code = WEXITSTATUS(exit_status);
     }
 
-    boost::iostreams::file_descriptor_source source{ p.source, boost::iostreams::close_handle };
-    boost::iostreams::stream<boost::iostreams::file_descriptor_source> is(source);
-
-    std::string buffer(std::istreambuf_iterator<char>(is.rdbuf()), std::istreambuf_iterator<char>());
-
-    auto compiler_id = buffer.substr(0, buffer.find(" "));
-
-    static std::unordered_map<std::string, vendor> compiler_ids = {
-        { "g++", vendor::gcc },
-        { "clang", vendor::clang }
-    };
-
-    auto it = compiler_ids.find(compiler_id);
-    if (it != compiler_ids.end())
+    if (!exit_code)
     {
-        _vendor = it->second;
+        boost::iostreams::file_descriptor_source source{ p.source, boost::iostreams::close_handle };
+        boost::iostreams::stream<boost::iostreams::file_descriptor_source> is(source);
+
+        std::string buffer(std::istreambuf_iterator<char>(is.rdbuf()), std::istreambuf_iterator<char>());
+
+        _parse_detection_output(std::move(buffer));
     }
 
     static std::unordered_map<vendor, const char *> compiler_names = {
@@ -129,51 +125,54 @@ void reaver::despayre::cxx::_v1::cxx_compiler::_detect_compiler()
         { vendor::unknown, "unknown" }
     };
 
-    switch (_vendor)
-    {
-        case vendor::gcc:
-            _detect_gcc_version(buffer);
-            break;
-
-        case vendor::clang:
-            _detect_clang_version(buffer);
-            break;
-
-        default:
-            ;
-    }
-
     logger::dlog() << " -- C++ compiler identification: " << compiler_names.at(_vendor) << " " << _version;
 }
 
-void reaver::despayre::cxx::_v1::cxx_compiler::_detect_gcc_version(const std::string & buffer)
+void reaver::despayre::cxx::_v1::cxx_compiler::_parse_detection_output(std::string output)
 {
-    // gcc (some additional identification) X.Y.Z possibly something like a date
-    std::regex pattern{ R"(^g\+\+ \(.*\) ([0-9]+\.[0-9]+\.[0-9+]))" };
-    std::smatch result;
+    std::stringstream stream{ std::move(output) };
+    std::string buffer;
 
-    if (!std::regex_search(buffer, result, pattern))
+    std::regex message_pattern{ R"(^despayre: ([^:]+): (.*)$)" };
+    std::smatch match;
+
+    std::unordered_map<std::string, std::string> messages;
+
+    while (std::getline(stream, buffer))
     {
-        _vendor = vendor::unknown;
+        if (std::regex_match(buffer, match, message_pattern))
+        {
+            if (match[1] == "error")
+            {
+                throw std::runtime_error{ match[2] };
+            }
+
+            auto it = messages.find(match[1]);
+            if (it != messages.end())
+            {
+                assert(!"a duplicate message from the detector!");
+            }
+
+            messages.emplace(match[1], match[2]);
+        }
+    }
+
+    static std::unordered_map<std::string, vendor> compiler_ids = {
+        { "G++", vendor::gcc },
+        { "Clang++", vendor::clang },
+        { "unknown", vendor::unknown }
+    };
+
+    _vendor = compiler_ids.at(messages.at("compiler-id"));
+
+    if (_vendor == vendor::unknown)
+    {
         return;
     }
 
-    _version = result[1];
-}
-
-void reaver::despayre::cxx::_v1::cxx_compiler::_detect_clang_version(const std::string & buffer)
-{
-    // clang version X.Y.Z-possibly-detailed-version (branch)
-    std::regex pattern{ R"(^clang version ([0-9]+\.[0-9]+\.[0-9+]))" };
-    std::smatch result;
-
-    if (!std::regex_search(buffer, result, pattern))
-    {
-        _vendor = vendor::unknown;
-        return;
-    }
-
-    _version = result[1];
+    _version = messages.at("compiler-version");
+    _default_cxx_version = messages.at("c++");
+    _is_strict_by_default = messages.at("compiler-strict") == "true";
 }
 
 std::vector<std::string> reaver::despayre::cxx::_v1::cxx_compiler::_build_command(context_ptr ctx, const boost::filesystem::path & path) const
@@ -234,12 +233,12 @@ std::vector<std::string> reaver::despayre::cxx::_v1::cxx_compiler::_build_comman
 
 std::vector<boost::filesystem::path> reaver::despayre::cxx::_v1::cxx_compiler::inputs(context_ptr ctx, const boost::filesystem::path & path) const
 {
+    auto inputs = filesystem::all_symlinked_paths(_compiler_path);
+
     auto deps_path = dependencies_path(ctx, path);
 
     if (boost::filesystem::exists(deps_path))
     {
-        std::vector<boost::filesystem::path> inputs;
-
         std::fstream file{ deps_path.string(), std::ios::in };
         std::string buffer{ std::istreambuf_iterator<char>{ file.rdbuf() }, {} };
         auto start = buffer.begin();
@@ -291,11 +290,11 @@ std::vector<boost::filesystem::path> reaver::despayre::cxx::_v1::cxx_compiler::i
             start = current;
         }
 
-        inputs.push_back(_compiler_path);
         return inputs;
     }
 
-    return { path, _compiler_path };
+    inputs.push_back(path);
+    return inputs;
 }
 
 std::vector<boost::filesystem::path> reaver::despayre::cxx::_v1::cxx_compiler::outputs(context_ptr ctx, const boost::filesystem::path & path) const

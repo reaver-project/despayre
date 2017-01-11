@@ -51,8 +51,7 @@ namespace reaver
 
             private:
                 void _detect_compiler();
-                void _detect_gcc_version(const std::string &);
-                void _detect_clang_version(const std::string &);
+                void _parse_detection_output(std::string);
 
                 std::vector<std::string> _build_command(context_ptr, const boost::filesystem::path &) const;
 
@@ -69,6 +68,8 @@ namespace reaver
                 boost::filesystem::path _compiler_path;
                 vendor _vendor = vendor::unknown;
                 std::string _version;
+                std::string _default_cxx_version;
+                bool _is_strict_by_default = false;
             };
         }}
     }
